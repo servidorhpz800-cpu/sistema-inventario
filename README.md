@@ -1,0 +1,99 @@
+# Compuser - Inventario de equipos de internet
+
+Sistema básico en PHP/MySQL para gestionar inventario de equipos de internet con roles separados:
+
+- Administrador
+- Tienda
+- Técnicos
+
+## Requisitos
+
+- XAMPP con Apache + MySQL activos
+- PHP 8.x
+- Navegador web
+- Extensión PHP cURL y Fileinfo habilitadas
+
+## Instalación rápida
+
+1. Copia esta carpeta en `C:\xampp\htdocs\compuser`
+2. Inicia Apache y MySQL en XAMPP
+3. En phpMyAdmin, importa `database/schema.sql`. Esto crea la base de datos, todas las tablas y los usuarios demo.
+4. Abre `http://localhost/compuser/index.php`
+5. Usa los usuarios demo:
+   - admin / admin123
+   - tienda / tienda123
+   - santos / santos123
+   - jorge / jorge123
+   - dario / dario123
+   - kevin / kevin123
+
+La aplicación usa una sola conexión PDO compartida por todos sus módulos. La extensión `pdo_mysql` debe estar habilitada. La estructura SQL se importa una vez; no se crean ni alteran tablas al abrir cada página.
+
+Las sesiones de acceso usan una cookie persistente de hasta 10 años y no se cierran por inactividad normal. En equipos compartidos, usa siempre **Cerrar sesión** al terminar.
+
+## Base de datos central
+
+Para configurar TiDB Cloud, copia `config/database.local.example.php` como `config/database.local.php` y edita ahí el host, usuario, contraseña y certificado CA. Ese archivo está excluido por `.gitignore` y no debe subirse a GitHub. También puedes definir `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS` y `DB_SSL_CA` en el entorno de Apache; las variables de entorno tienen prioridad. TiDB Cloud usa normalmente el puerto `4000`.
+
+La conexión requiere TLS y valida el certificado del servidor. `DB_SSL_CA` puede apuntar al certificado CA PEM de TiDB Cloud; si no se define, se usa el archivo indicado por `openssl.cafile` o `curl.cainfo` en `php.ini`. Si ninguno apunta a un certificado válido, configura `DB_SSL_CA` en `database.local.php`.
+
+### Solución de problemas de conexión
+
+- `Access denied` o error `1045`: revisa `DB_USER` y `DB_PASS`, y confirma que la IP del servidor esté permitida en las reglas de acceso de TiDB Cloud.
+- Error de TLS o certificado: verifica que `DB_SSL_CA` apunte a un archivo PEM existente y válido. En XAMPP suele estar disponible `C:\xampp\apache\bin\curl-ca-bundle.crt`.
+- Tiempo de espera o conexión rechazada: confirma el hostname del clúster, el puerto `4000` y que la red permita conexiones salientes a TiDB Cloud.
+- Error de controlador: habilita `pdo_mysql` en el PHP que usa Apache y reinícialo.
+
+Si las credenciales se subieron previamente a GitHub, moverlas ahora no las elimina del historial. Cambia la contraseña de TiDB Cloud y limpia el historial del repositorio antes de volver a publicarlo.
+
+Importa `database/schema.sql` una sola vez en el servidor central con una cuenta administradora. Después crea un usuario exclusivo para la aplicación y dale permisos solo sobre esta base; no uses `root` ni expongas el puerto MySQL a Internet. Permite conexiones únicamente desde las IP de los servidores web mediante el firewall del servidor y las reglas de MySQL.
+
+Ejemplo de permisos (reemplaza la IP y la contraseña; ejecútalo como administrador de MySQL):
+
+```sql
+CREATE USER 'compuser_app'@'192.168.1.20' IDENTIFIED BY 'cambia-esta-clave';
+GRANT SELECT, INSERT, UPDATE, DELETE ON compuser_inventario.* TO 'compuser_app'@'192.168.1.20';
+```
+
+Si ya tienes datos, haz primero un respaldo. No vuelvas a importar el esquema sobre una instalación antigua esperando que modifique tablas existentes. Si todavía faltan columnas de domicilio o reportes, aplica primero `database/migracion_domicilio_reportes.sql`; después aplica una sola vez `database/migracion_equipo_reportes.sql` para que Tienda y Admin muestren el módem seleccionado en cada reporte. Aplica también una sola vez `database/migracion_clientes.sql` para crear el directorio de clientes y asociar las órdenes existentes por teléfono. Ejecuta `database/migracion_indices.sql` una sola vez para añadir índices a esa base. En instalaciones existentes, aplica además `database/migracion_movimientos_evidencias.sql` para guardar el cliente por movimiento/reporte y habilitar varias imágenes por reporte. No ejecutes estas migraciones en una base recién creada con `schema.sql` si sus tablas ya incluyen esos cambios.
+
+Las fotos de reportes se guardan como archivos bajo `uploads/reportes`; la base central guarda su ruta. Si ejecutas más de un servidor web, monta esa carpeta en almacenamiento compartido con permisos de escritura para Apache, o migra los archivos a un servicio de almacenamiento compartido. No se guardan imágenes binarias en MySQL para evitar inflar y ralentizar la base.
+
+## Funcionalidades
+
+- Administración de inventario
+- Agregar, editar, eliminar equipos
+- Estados: nuevo, medio uso, recogido, dañados, no sirven
+- Despacho de equipos a técnicos
+- Seguimiento de órdenes
+- Directorio de clientes con domicilios, búsqueda y reutilización al crear órdenes
+- Reportes técnicos
+- Roles separados por pantalla
+- Extracción de datos de equipos con IA desde foto o texto de etiqueta
+
+## Configurar la extracción con IA
+
+La pantalla de Tienda usa Gemini para leer etiquetas y completar el formulario de inventario. Define estas variables de entorno para Apache/PHP antes de usar el botón **Extraer y completar formulario**:
+
+- `GEMINI_API_KEY`: clave de API de Google AI Studio
+- `GEMINI_MODEL`: opcional; por defecto `gemini-2.0-flash`
+- `GEMINI_API_ENDPOINT`: opcional; por defecto `https://generativelanguage.googleapis.com/v1beta/models`
+
+La foto se envía al proveedor configurado y los datos siempre quedan editables antes de guardar. No pongas la clave directamente en los archivos del proyecto.
+
+## Archivos principales
+
+- `index.php` - login
+- `admin.php` - panel del administrador
+- `tienda.php` - gestión de stock y despacho
+- `tecnico.php` - órdenes y reportes de técnicos
+- `config/database.php` - conexión central configurable por variables de entorno
+- `database/schema.sql` - esquema completo para instalaciones nuevas
+- `database/migracion_domicilio_reportes.sql` - actualización de instalaciones anteriores
+- `database/migracion_equipo_reportes.sql` - enlaza cada reporte con el equipo utilizado
+- `database/migracion_movimientos_evidencias.sql` - agrega cliente por movimiento y evidencias múltiples
+- `database/migracion_indices.sql` - índices para bases existentes
+
+## Importante
+
+Mantén respaldos regulares de MySQL y de `uploads/reportes`. Las operaciones de esquema son manuales y deben ejecutarse antes de desplegar una versión que requiera nuevas columnas o tablas.

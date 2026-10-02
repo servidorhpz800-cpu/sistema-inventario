@@ -1,0 +1,149 @@
+CREATE DATABASE IF NOT EXISTS compuser_inventario CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+USE compuser_inventario;
+
+CREATE TABLE IF NOT EXISTS usuarios (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario VARCHAR(100) NOT NULL UNIQUE,
+    nombre VARCHAR(150) NOT NULL,
+    rol ENUM('admin', 'tienda', 'tecnico') NOT NULL,
+    equipo VARCHAR(150) DEFAULT NULL,
+    password VARCHAR(255) NOT NULL,
+    activo TINYINT(1) DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS equipos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tipo VARCHAR(100) NOT NULL,
+    marca VARCHAR(100) DEFAULT NULL,
+    modelo VARCHAR(120) DEFAULT NULL,
+    condicion ENUM('nuevo', 'medio_uso', 'recogido', 'no_serve', 'danado') NOT NULL,
+    estado ENUM('disponible', 'asignado', 'en_reparacion', 'retirado', 'dado_baja') NOT NULL,
+    ubicacion VARCHAR(120) DEFAULT NULL,
+    serial VARCHAR(120) DEFAULT NULL,
+    observaciones TEXT DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_equipos_serial (serial),
+    INDEX idx_equipos_estado_updated (estado, updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS clientes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(150) NOT NULL,
+    numero VARCHAR(40) NOT NULL UNIQUE,
+    calle VARCHAR(180) NOT NULL,
+    numero_exterior VARCHAR(30) DEFAULT NULL,
+    colonia VARCHAR(120) DEFAULT NULL,
+    referencias TEXT DEFAULT NULL,
+    ubicacion_url VARCHAR(500) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_clientes_nombre (nombre)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS ordenes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    equipo_id INT DEFAULT NULL,
+    tecnico_id INT NOT NULL,
+    cliente_id INT DEFAULT NULL,
+    cliente_nombre VARCHAR(150) DEFAULT NULL,
+    cliente_numero VARCHAR(40) DEFAULT NULL,
+    calle VARCHAR(180) DEFAULT NULL,
+    numero_exterior VARCHAR(30) DEFAULT NULL,
+    colonia VARCHAR(120) DEFAULT NULL,
+    referencias TEXT DEFAULT NULL,
+    ubicacion_url VARCHAR(500) DEFAULT NULL,
+    ip_asignada VARCHAR(45) DEFAULT NULL,
+    tipo_orden ENUM('retiro', 'instalacion', 'recogida', 'revision', 'reporte') NOT NULL,
+    estado ENUM('pendiente', 'en_proceso', 'completado', 'cancelado', 'danado') NOT NULL,
+    descripcion TEXT DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_ordenes_tecnico_estado_created (tecnico_id, estado, created_at),
+    INDEX idx_ordenes_estado_created (estado, created_at),
+    FOREIGN KEY (equipo_id) REFERENCES equipos(id) ON DELETE CASCADE,
+    FOREIGN KEY (tecnico_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS reportes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tecnico_id INT NOT NULL,
+    orden_id INT DEFAULT NULL,
+    equipo_id INT DEFAULT NULL,
+    movimiento_id INT DEFAULT NULL,
+    cliente_nombre VARCHAR(150) DEFAULT NULL,
+    cliente_numero VARCHAR(40) DEFAULT NULL,
+    titulo VARCHAR(180) NOT NULL,
+    actividad_realizada TEXT DEFAULT NULL,
+    materiales TEXT DEFAULT NULL,
+    resultado TEXT DEFAULT NULL,
+    descripcion TEXT NOT NULL,
+    latitud DECIMAL(10, 7) DEFAULT NULL,
+    longitud DECIMAL(10, 7) DEFAULT NULL,
+    foto_url VARCHAR(255) DEFAULT NULL,
+    estado ENUM('normal', 'revision', 'danado', 'dañado', 'no_serve', 'reparacion') NOT NULL DEFAULT 'normal',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_reportes_tecnico_created (tecnico_id, created_at),
+    INDEX idx_reportes_equipo_id (equipo_id),
+    INDEX idx_reportes_movimiento_id (movimiento_id),
+    FOREIGN KEY (tecnico_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (orden_id) REFERENCES ordenes(id) ON DELETE SET NULL,
+    FOREIGN KEY (equipo_id) REFERENCES equipos(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS reporte_evidencias (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    reporte_id INT NOT NULL,
+    foto_url VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_reporte_evidencias_reporte (reporte_id),
+    FOREIGN KEY (reporte_id) REFERENCES reportes(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS equipos_tecnico (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    equipo_id INT NOT NULL,
+    tecnico_id INT NOT NULL,
+    orden_id INT DEFAULT NULL,
+    cliente_nombre VARCHAR(150) DEFAULT NULL,
+    cliente_numero VARCHAR(40) DEFAULT NULL,
+    estado ENUM('portado', 'utilizado', 'no_utilizado', 'falla', 'devuelto') NOT NULL DEFAULT 'portado',
+    observaciones TEXT DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_equipos_tecnico_updated (tecnico_id, updated_at),
+    FOREIGN KEY (equipo_id) REFERENCES equipos(id) ON DELETE CASCADE,
+    FOREIGN KEY (tecnico_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (orden_id) REFERENCES ordenes(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+ALTER TABLE reportes
+    ADD CONSTRAINT fk_reportes_movimiento FOREIGN KEY (movimiento_id) REFERENCES equipos_tecnico(id) ON DELETE SET NULL;
+
+CREATE TABLE IF NOT EXISTS actividad_log (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT DEFAULT NULL,
+    usuario_nombre VARCHAR(150) NOT NULL,
+    rol VARCHAR(30) NOT NULL,
+    modulo VARCHAR(50) NOT NULL,
+    accion VARCHAR(80) NOT NULL,
+    entidad VARCHAR(50) NOT NULL,
+    entidad_id INT DEFAULT NULL,
+    detalle TEXT DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_actividad_fecha (created_at),
+    INDEX idx_actividad_modulo (modulo),
+    INDEX idx_actividad_entidad (entidad, entidad_id),
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO usuarios (usuario, nombre, rol, equipo, password) VALUES
+('admin', 'Administrador', 'admin', NULL, '$2y$10$43ex2TaVu4VPWNnKiHkjbuOXqc7ChUp80vwlFavr8RhQmGp1.bx/y'),
+('tienda', 'Tienda', 'tienda', NULL, '$2y$10$Qc5KeADKbuiJvZpMQlA6Men0OUX5Jr0ZnSkiBRaCb2OIdaQwZeDrq'),
+('santos', 'Santos', 'tecnico', 'Camioneta Azul', '$2y$10$o5bwekkwMxBymn8RRKKu3uxhQxHY8m.6fqBPst2snE3cy9xGcBSAe'),
+('jorge', 'Jorge', 'tecnico', 'Camioneta Azul', '$2y$10$LG1oPvYRbfClBV/fIa1vRO6mLkm0gw2CeVZw0g7w2QlUG4sF3IAeO'),
+('dario', 'Dario', 'tecnico', 'Coche Blanco', '$2y$10$KkUThtk8RX1sbkQqOXSFt.LAHi.hnEwaDpzmQ5jUAn.irW.5D8Xq2'),
+('kevin', 'Kevin', 'tecnico', 'Coche Blanco', '$2y$10$Ck6lDvdCtBC6BZ3P7SkYluFw5wEXK0B3fMTGyfNg3xyEs0TzvbqBW')
+ON DUPLICATE KEY UPDATE usuario = usuario;
