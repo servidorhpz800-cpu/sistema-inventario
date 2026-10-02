@@ -1,15 +1,7 @@
 <?php
 
-/*
-|--------------------------------------------------------------------------
-| INICIAR SESIÓN
-|--------------------------------------------------------------------------
-| Debe ejecutarse antes de utilizar $_SESSION, session_regenerate_id()
-| o cualquier header().
-*/
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/includes/session.php';
+iniciarSesionPersistente();
 
 require __DIR__ . '/config/database.php';
 

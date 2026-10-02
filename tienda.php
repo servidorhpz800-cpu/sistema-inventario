@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/includes/session.php';
+iniciarSesionPersistente();
 require __DIR__ . '/config/database.php';
 require __DIR__ . '/includes/functions.php';
 requireLogin(['tienda', 'admin']);
