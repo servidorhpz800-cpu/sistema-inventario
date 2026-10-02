@@ -35,6 +35,14 @@ Las sesiones de acceso usan una cookie persistente de hasta 10 años y no se cie
 
 Para configurar TiDB Cloud, copia `config/database.local.example.php` como `config/database.local.php` y edita ahí el host, usuario, contraseña y certificado CA. Ese archivo está excluido por `.gitignore` y no debe subirse a GitHub. También puedes definir `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS` y `DB_SSL_CA` en el entorno de Apache; las variables de entorno tienen prioridad. TiDB Cloud usa normalmente el puerto `4000`.
 
+### Despliegue en Render
+
+Configura en el servicio web de Render las variables `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` y `DB_PASS` con los datos de tu servidor MySQL externo. Usa el puerto que indique ese proveedor (`4000` es el valor predeterminado del proyecto para TiDB Cloud; otros servidores MySQL suelen usar `3306`). `DB_NAME` debe ser la base donde se instalará el esquema, normalmente `compuser_inventario`.
+
+Render ejecuta la aplicación, pero el esquema no se importa automáticamente. Con un cliente MySQL conectado a esa misma base y servidor, importa `database/schema.sql` una sola vez con una cuenta que tenga permisos para crear tablas e insertar los usuarios iniciales. Después verifica que exista `usuarios` (por ejemplo, con `SHOW TABLES;`). No ejecutes el esquema repetidamente sobre una instalación existente.
+
+El error `Table 'compuser_inventario.usuarios' doesn't exist` significa que la aplicación sí alcanzó una base llamada `compuser_inventario`, pero esa base no tiene la tabla que necesita el inicio de sesión. Confirma que importaste el esquema en el mismo servidor indicado por `DB_HOST` y la misma base indicada por `DB_NAME`; importar el archivo en MySQL local de XAMPP no crea las tablas en el servidor remoto.
+
 La conexión requiere TLS y valida el certificado del servidor. `DB_SSL_CA` puede apuntar al certificado CA PEM de TiDB Cloud; si no se define, se usa el archivo indicado por `openssl.cafile` o `curl.cainfo` en `php.ini`. Si ninguno apunta a un certificado válido, configura `DB_SSL_CA` en `database.local.php`.
 
 ### Solución de problemas de conexión
