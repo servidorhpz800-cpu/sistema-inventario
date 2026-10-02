@@ -1,4 +1,3 @@
 /config/database.local.php
 /uploads/reportes/*
 !/uploads/reportes/.gitkeep
-/config/ai.php

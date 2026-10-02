@@ -1,40 +1,10 @@
 <?php
 require __DIR__ . '/config/database.php';
-require __DIR__ . '/config/ai.php';
 require __DIR__ . '/includes/functions.php';
 requireLogin(['tienda', 'admin']);
 
 $mensaje = null;
 $tipoMensaje = 'success';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['extraer_equipo_ia'])) {
-    header('Content-Type: application/json; charset=utf-8');
-    try {
-        $archivo = $_FILES['imagen_equipo'] ?? null;
-        $imagen = null;
-        if ($archivo && $archivo['error'] !== UPLOAD_ERR_NO_FILE) {
-            if ($archivo['error'] !== UPLOAD_ERR_OK || $archivo['size'] > 8 * 1024 * 1024) {
-                throw new RuntimeException('La imagen debe pesar menos de 8 MB.');
-            }
-            $mime = (new finfo(FILEINFO_MIME_TYPE))->file($archivo['tmp_name']);
-            if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
-                throw new RuntimeException('Solo se aceptan imágenes JPG, PNG o WEBP.');
-            }
-            $imagen = ['mime' => $mime, 'data' => file_get_contents($archivo['tmp_name'])];
-        }
-
-        $texto = trim((string)($_POST['texto_equipo'] ?? ''));
-        if ($imagen === null && $texto === '') {
-            throw new RuntimeException('Sube una foto o escribe los datos de la etiqueta.');
-        }
-
-        echo json_encode(['ok' => true, 'equipo' => extraerEquipoConIA($texto, $imagen)], JSON_UNESCAPED_UNICODE);
-    } catch (Throwable $error) {
-        http_response_code(400);
-        echo json_encode(['ok' => false, 'error' => $error->getMessage()], JSON_UNESCAPED_UNICODE);
-    }
-    exit;
-}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['agregar_equipo'])) {
     $tipo = trim($_POST['tipo'] ?? '');
@@ -398,25 +368,6 @@ if (!in_array($vistaTienda, ['operacion', 'clientes'], true)) {
             <div class="content-grid">
                 <div class="card">
                     <h3>Agregar equipo al stock</h3>
-                    <div class="ai-extractor" id="equipmentAiExtractor">
-                        <div class="ai-extractor-heading">
-                            <div>
-                                <span class="eyebrow">Carga asistida</span>
-                                <strong>Extraer datos con IA</strong>
-                            </div>
-                            <span class="badge info">Foto o texto</span>
-                        </div>
-                        <label>
-                            <span>Foto de la etiqueta o equipo</span>
-                            <input type="file" id="equipmentAiImage" accept="image/jpeg,image/png,image/webp" capture="environment">
-                        </label>
-                        <label>
-                            <span>Texto de la etiqueta (opcional)</span>
-                            <textarea id="equipmentAiText" rows="2" placeholder="Ej. Huawei HG8145V5, SN ABC123, nuevo"></textarea>
-                        </label>
-                        <button type="button" class="btn btn-secondary" id="extractEquipmentButton">Extraer y completar formulario</button>
-                        <div id="equipmentAiStatus" class="form-note" aria-live="polite">La información extraída se puede revisar antes de registrar.</div>
-                    </div>
                     <form method="POST" id="stockEquipmentForm">
                         <div class="form-grid">
                             <label>
@@ -743,10 +694,6 @@ if (!in_array($vistaTienda, ['operacion', 'clientes'], true)) {
         const serialButtons = document.querySelectorAll('[data-scan-target]');
         const serialFileTriggers = document.querySelectorAll('[data-scan-file-trigger]');
         const serialFileInputs = document.querySelectorAll('[data-scan-file-target]');
-        const equipmentAiImage = document.getElementById('equipmentAiImage');
-        const equipmentAiText = document.getElementById('equipmentAiText');
-        const extractEquipmentButton = document.getElementById('extractEquipmentButton');
-        const equipmentAiStatus = document.getElementById('equipmentAiStatus');
 
         function escapeHtml(value) {
             return String(value ?? '')
@@ -756,71 +703,6 @@ if (!in_array($vistaTienda, ['operacion', 'clientes'], true)) {
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
         }
-
-        function completarEquipoExtraido(equipo) {
-            const form = document.getElementById('stockEquipmentForm');
-            if (!form || !equipo) {
-                return;
-            }
-
-            const setValue = (name, value) => {
-                const field = form.querySelector(`[name="${name}"]`);
-                if (field && value !== undefined && value !== null && value !== '') {
-                    field.value = value;
-                }
-            };
-
-            const typeField = form.querySelector('[name="tipo"]');
-            const typeValue = String(equipo.tipo || '').trim();
-            if (typeField && typeValue) {
-                const matchingOption = Array.from(typeField.options).find((option) => option.value.toLowerCase() === typeValue.toLowerCase());
-                typeField.value = matchingOption ? matchingOption.value : 'Otros';
-            }
-            setValue('marca', equipo.marca);
-            setValue('modelo', equipo.modelo);
-            setValue('serial', equipo.serial);
-            setValue('condicion', equipo.condicion);
-            setValue('ubicacion', equipo.ubicacion || 'Tienda');
-            setValue('observaciones', equipo.observaciones);
-            if (typeValue && (!typeField || typeField.value === 'Otros')) {
-                const observations = form.querySelector('[name="observaciones"]');
-                if (observations && !observations.value.includes(`Tipo detectado: ${typeValue}`)) {
-                    observations.value = `Tipo detectado: ${typeValue}. ${observations.value}`.trim();
-                }
-            }
-        }
-
-        async function extraerEquipoConIA() {
-            if (!equipmentAiImage?.files?.length && !equipmentAiText?.value.trim()) {
-                equipmentAiStatus.textContent = 'Selecciona una foto o escribe el texto de la etiqueta.';
-                return;
-            }
-
-            const data = new FormData();
-            data.append('extraer_equipo_ia', '1');
-            data.append('texto_equipo', equipmentAiText?.value.trim() || '');
-            if (equipmentAiImage?.files?.[0]) {
-                data.append('imagen_equipo', equipmentAiImage.files[0]);
-            }
-
-            extractEquipmentButton.disabled = true;
-            equipmentAiStatus.textContent = 'Analizando la información...';
-            try {
-                const response = await fetch('tienda.php', { method: 'POST', body: data });
-                const result = await response.json();
-                if (!response.ok || !result.ok) {
-                    throw new Error(result.error || 'No se pudieron extraer los datos.');
-                }
-                completarEquipoExtraido(result.equipo);
-                equipmentAiStatus.textContent = 'Datos extraídos. Revísalos y registra el equipo cuando estén correctos.';
-            } catch (error) {
-                equipmentAiStatus.textContent = error.message;
-            } finally {
-                extractEquipmentButton.disabled = false;
-            }
-        }
-
-        extractEquipmentButton?.addEventListener('click', extraerEquipoConIA);
 
         function parseScannedValue(rawValue) {
             const text = String(rawValue ?? '').trim();

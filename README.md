@@ -77,17 +77,6 @@ Las fotos de reportes se guardan como archivos bajo `uploads/reportes`; la base 
 - Directorio de clientes con domicilios, búsqueda y reutilización al crear órdenes
 - Reportes técnicos
 - Roles separados por pantalla
-- Extracción de datos de equipos con IA desde foto o texto de etiqueta
-
-## Configurar la extracción con IA
-
-La pantalla de Tienda usa Gemini para leer etiquetas y completar el formulario de inventario. Define estas variables de entorno para Apache/PHP antes de usar el botón **Extraer y completar formulario**:
-
-- `GEMINI_API_KEY`: clave de API de Google AI Studio
-- `GEMINI_MODEL`: opcional; por defecto `gemini-2.0-flash`
-- `GEMINI_API_ENDPOINT`: opcional; por defecto `https://generativelanguage.googleapis.com/v1beta/models`
-
-La foto se envía al proveedor configurado y los datos siempre quedan editables antes de guardar. No pongas la clave directamente en los archivos del proyecto.
 
 ## Archivos principales
 

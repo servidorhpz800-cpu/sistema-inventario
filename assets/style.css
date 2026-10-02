@@ -231,31 +231,6 @@ button, input, select, textarea {
     font-size: 1.15rem;
 }
 
-.ai-extractor {
-    margin: -4px 0 20px;
-    padding: 16px;
-    background: #f5f8ff;
-    border: 1px dashed #a9bee9;
-    border-radius: 12px;
-}
-
-.ai-extractor-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 14px;
-}
-
-.ai-extractor-heading strong {
-    display: block;
-    margin-top: 4px;
-}
-
-.ai-extractor .btn {
-    margin-top: 4px;
-}
-
 .scanner-panel {
     margin-top: 24px;
 }
