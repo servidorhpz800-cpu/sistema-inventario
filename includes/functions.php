@@ -57,9 +57,12 @@ function getInventario(PDO $pdo): array
     return $stmt->fetchAll();
 }
 
-function getOrdenes(PDO $pdo, ?int $tecnicoId = null): array
+function getOrdenes(PDO $pdo, ?int $tecnicoId = null, bool $archivadas = false): array
 {
-    $sql = "SELECT o.*, e.tipo, e.marca, e.modelo, e.condicion, u.nombre AS tecnico FROM ordenes o LEFT JOIN equipos e ON e.id = o.equipo_id JOIN usuarios u ON u.id = o.tecnico_id WHERE o.tipo_orden <> 'revision' AND o.estado IN ('pendiente', 'en_proceso')";
+    $filtroArchivo = $archivadas
+        ? "o.created_at < CURRENT_DATE AND o.estado <> 'pendiente'"
+        : "(o.created_at >= CURRENT_DATE OR o.estado = 'pendiente')";
+    $sql = "SELECT o.*, e.tipo, e.marca, e.modelo, e.condicion, u.nombre AS tecnico FROM ordenes o LEFT JOIN equipos e ON e.id = o.equipo_id JOIN usuarios u ON u.id = o.tecnico_id WHERE o.tipo_orden <> 'revision' AND {$filtroArchivo}";
 
     if ($tecnicoId !== null) {
         $sql .= ' AND o.tecnico_id = :tecnicoId';
@@ -72,16 +75,20 @@ function getOrdenes(PDO $pdo, ?int $tecnicoId = null): array
     return $stmt->fetchAll();
 }
 
-function getReportes(PDO $pdo, ?int $tecnicoId = null): array
+function getReportes(PDO $pdo, ?int $tecnicoId = null, bool $archivadas = false): array
 {
+    $filtroArchivo = $archivadas
+        ? "r.created_at < CURRENT_DATE AND (o.id IS NULL OR o.estado <> 'pendiente')"
+        : "(r.created_at >= CURRENT_DATE OR o.estado = 'pendiente')";
     $sql = 'SELECT r.*, u.nombre AS tecnico, o.tipo_orden, o.estado AS orden_estado, COALESCE(r.cliente_nombre, o.cliente_nombre) AS cliente_nombre_actual, COALESCE(r.cliente_numero, o.cliente_numero) AS cliente_numero_actual, o.calle, o.numero_exterior, o.colonia, o.referencias, o.ubicacion_url, o.ip_asignada, e.tipo AS equipo_tipo, e.marca AS equipo_marca, e.modelo AS equipo_modelo, e.serial AS equipo_serial
         FROM reportes r
         JOIN usuarios u ON u.id = r.tecnico_id
         LEFT JOIN ordenes o ON o.id = r.orden_id
-        LEFT JOIN equipos e ON e.id = COALESCE(r.equipo_id, o.equipo_id)';
+        LEFT JOIN equipos e ON e.id = COALESCE(r.equipo_id, o.equipo_id)
+        WHERE ' . $filtroArchivo;
 
     if ($tecnicoId !== null) {
-        $stmt = $pdo->prepare($sql . ' WHERE r.tecnico_id = :tecnicoId ORDER BY r.created_at DESC');
+        $stmt = $pdo->prepare($sql . ' AND r.tecnico_id = :tecnicoId ORDER BY r.created_at DESC');
         $stmt->execute(['tecnicoId' => $tecnicoId]);
         $reportes = $stmt->fetchAll();
     } else {

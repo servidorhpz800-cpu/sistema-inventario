@@ -186,9 +186,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['despachar_equipo'])) 
 $equipos = getInventario($pdo);
 $equiposDisponibles = array_filter($equipos, fn($equipo) => $equipo['estado'] === 'disponible');
 $tecnicos = getUsuarios($pdo, 'tecnico');
-$ordenes = getOrdenes($pdo);
-$reportes = getReportes($pdo);
-$clientes = $pdo->query('SELECT c.*, COUNT(o.id) AS total_ordenes, MAX(o.created_at) AS ultima_visita FROM clientes c LEFT JOIN ordenes o ON o.cliente_id = c.id GROUP BY c.id ORDER BY c.updated_at DESC, c.nombre ASC')->fetchAll();
+$archivadas = ($_GET['archivo'] ?? '') === '1';
+$ordenes = getOrdenes($pdo, null, $archivadas);
+$reportes = getReportes($pdo, null, $archivadas);
+$clientes = $pdo->query('SELECT c.*, COUNT(o.id) AS total_ordenes, MAX(o.created_at) AS ultima_visita, (SELECT o_ip.ip_asignada FROM ordenes o_ip WHERE o_ip.cliente_id = c.id AND o_ip.ip_asignada IS NOT NULL AND o_ip.ip_asignada <> \'\' ORDER BY o_ip.created_at DESC, o_ip.id DESC LIMIT 1) AS ip_asignada FROM clientes c LEFT JOIN ordenes o ON o.cliente_id = c.id GROUP BY c.id ORDER BY c.updated_at DESC, c.nombre ASC')->fetchAll();
 $equiposEnCampo = $pdo->query("SELECT et.*, e.tipo, e.marca, e.modelo, e.serial, u.nombre AS tecnico, o.id AS orden_numero, o.tipo_orden, COALESCE(et.cliente_nombre, o.cliente_nombre) AS cliente_nombre_actual, COALESCE(et.cliente_numero, o.cliente_numero) AS cliente_numero_actual FROM equipos_tecnico et JOIN equipos e ON e.id = et.equipo_id JOIN usuarios u ON u.id = et.tecnico_id LEFT JOIN ordenes o ON o.id = et.orden_id ORDER BY et.updated_at DESC")->fetchAll();
 foreach ($equiposEnCampo as &$movimientoCampo) {
     $movimientoCampo['cliente_nombre'] = $movimientoCampo['cliente_nombre_actual'];
@@ -239,6 +240,9 @@ if (!in_array($vistaTienda, ['operacion', 'clientes'], true)) {
             <nav class="admin-tabs tienda-tabs" aria-label="Secciones de tienda">
                 <a class="<?php echo $vistaTienda === 'operacion' ? 'active' : ''; ?>" href="tienda.php">Operación</a>
                 <a class="<?php echo $vistaTienda === 'clientes' ? 'active' : ''; ?>" href="tienda.php?vista=clientes">Clientes</a>
+                <?php if ($vistaTienda === 'operacion'): ?>
+                    <a class="<?php echo $archivadas ? 'active' : ''; ?>" href="tienda.php?archivo=1">Archivo diario</a>
+                <?php endif; ?>
             </nav>
 
             <?php if ($vistaTienda === 'clientes'): ?>
@@ -257,11 +261,11 @@ if (!in_array($vistaTienda, ['operacion', 'clientes'], true)) {
                 <div class="table-wrap">
                     <table class="table">
                         <thead>
-                            <tr><th>Cliente</th><th>Teléfono</th><th>Domicilio</th><th>Referencias</th><th>Órdenes</th><th>Última visita</th></tr>
+                            <tr><th>Cliente</th><th>Teléfono</th><th>Domicilio</th><th>IP más reciente</th><th>Referencias</th><th>Órdenes</th><th>Última visita</th></tr>
                         </thead>
                         <tbody id="tablaClientes">
                             <?php if (empty($clientes)): ?>
-                                <tr><td colspan="6">Los clientes se guardarán aquí al crear su primera orden.</td></tr>
+                                <tr><td colspan="7">Los clientes se guardarán aquí al crear su primera orden.</td></tr>
                             <?php else: ?>
                                 <?php foreach ($clientes as $cliente): ?>
                                     <?php $busquedaCliente = strtolower(trim($cliente['nombre'] . ' ' . $cliente['numero'] . ' ' . $cliente['calle'] . ' ' . ($cliente['numero_exterior'] ?? '') . ' ' . ($cliente['colonia'] ?? ''))); ?>
@@ -269,6 +273,7 @@ if (!in_array($vistaTienda, ['operacion', 'clientes'], true)) {
                                         <td><?php echo htmlspecialchars($cliente['nombre']); ?></td>
                                         <td><a href="tel:<?php echo htmlspecialchars($cliente['numero']); ?>"><?php echo htmlspecialchars($cliente['numero']); ?></a></td>
                                         <td><?php echo htmlspecialchars(trim($cliente['calle'] . ' ' . ($cliente['numero_exterior'] ?: '') . ', ' . ($cliente['colonia'] ?: ''))); ?><?php if (!empty($cliente['ubicacion_url'])): ?><br><a href="<?php echo htmlspecialchars($cliente['ubicacion_url']); ?>" target="_blank" rel="noopener">Abrir mapa</a><?php endif; ?></td>
+                                        <td><?php echo htmlspecialchars($cliente['ip_asignada'] ?: 'Sin IP registrada'); ?></td>
                                         <td><?php echo htmlspecialchars($cliente['referencias'] ?: '-'); ?></td>
                                         <td><?php echo (int)$cliente['total_ordenes']; ?></td>
                                         <td><?php echo $cliente['ultima_visita'] ? htmlspecialchars(date('d/m/Y', strtotime($cliente['ultima_visita']))) : '-'; ?></td>
@@ -474,7 +479,8 @@ if (!in_array($vistaTienda, ['operacion', 'clientes'], true)) {
                                             data-numero-exterior="<?php echo htmlspecialchars($cliente['numero_exterior'] ?? '', ENT_QUOTES); ?>"
                                             data-colonia="<?php echo htmlspecialchars($cliente['colonia'] ?? '', ENT_QUOTES); ?>"
                                             data-referencias="<?php echo htmlspecialchars($cliente['referencias'] ?? '', ENT_QUOTES); ?>"
-                                            data-ubicacion-url="<?php echo htmlspecialchars($cliente['ubicacion_url'] ?? '', ENT_QUOTES); ?>"><?php echo htmlspecialchars($cliente['nombre'] . ' · ' . $cliente['numero']); ?></option>
+                                            data-ubicacion-url="<?php echo htmlspecialchars($cliente['ubicacion_url'] ?? '', ENT_QUOTES); ?>"
+                                            data-ip="<?php echo htmlspecialchars($cliente['ip_asignada'] ?? '', ENT_QUOTES); ?>"><?php echo htmlspecialchars($cliente['nombre'] . ' · ' . $cliente['numero']); ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </label>
