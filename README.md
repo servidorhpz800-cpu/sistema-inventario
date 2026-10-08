@@ -17,7 +17,7 @@ Sistema básico en PHP/MySQL para gestionar inventario de equipos de internet co
 
 1. Copia esta carpeta en `C:\xampp\htdocs\compuser`
 2. Inicia Apache y MySQL en XAMPP
-3. En phpMyAdmin, importa `database/schema.sql`. Esto crea la base de datos, todas las tablas y los usuarios demo.
+3. En phpMyAdmin, importa `database/schema.sql` o ejecuta el contenido de `todo_sql`. Ambos crean la base de datos, todas las tablas y los usuarios demo.
 4. Abre `http://localhost/compuser/index.php`
 5. Usa los usuarios demo:
    - admin / admin123
@@ -26,6 +26,7 @@ Sistema básico en PHP/MySQL para gestionar inventario de equipos de internet co
    - jorge / jorge123
    - dario / dario123
    - kevin / kevin123
+   - joshua / joshua123
 
 La aplicación usa una sola conexión PDO compartida por todos sus módulos. La extensión `pdo_mysql` debe estar habilitada. La estructura SQL se importa una vez; no se crean ni alteran tablas al abrir cada página.
 

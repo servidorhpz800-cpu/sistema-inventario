@@ -14,21 +14,17 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['actualiz
     $movimientoId = (int)($_POST['movimiento_id'] ?? 0);
     $estadoEquipo = $_POST['estado_equipo_tecnico'] ?? 'portado';
     $observaciones = trim($_POST['equipo_observaciones_actualizacion'] ?? '');
-    $clienteNombreMovimiento = trim($_POST['movimiento_cliente_nombre'] ?? '');
-    $clienteNumeroMovimiento = trim($_POST['movimiento_cliente_numero'] ?? '');
     $estadosPermitidos = ['portado', 'utilizado', 'no_utilizado', 'falla', 'devuelto'];
 
-    if (in_array($estadoEquipo, $estadosPermitidos, true) && $clienteNombreMovimiento !== '' && $clienteNumeroMovimiento !== '') {
+    if (in_array($estadoEquipo, $estadosPermitidos, true)) {
         $movimiento = $pdo->prepare('SELECT equipo_id FROM equipos_tecnico WHERE id = :id AND tecnico_id = :tecnico_id LIMIT 1');
         $movimiento->execute(['id' => $movimientoId, 'tecnico_id' => $tecnicoIdSesion]);
         $movimiento = $movimiento->fetch();
 
         if ($movimiento) {
-            $pdo->prepare('UPDATE equipos_tecnico SET estado = :estado, observaciones = :observaciones, cliente_nombre = :cliente_nombre, cliente_numero = :cliente_numero WHERE id = :id AND tecnico_id = :tecnico_id')->execute([
+            $pdo->prepare('UPDATE equipos_tecnico SET estado = :estado, observaciones = :observaciones WHERE id = :id AND tecnico_id = :tecnico_id')->execute([
                 'estado' => $estadoEquipo,
                 'observaciones' => $observaciones,
-                'cliente_nombre' => $clienteNombreMovimiento,
-                'cliente_numero' => $clienteNumeroMovimiento,
                 'id' => $movimientoId,
                 'tecnico_id' => $tecnicoIdSesion,
             ]);
@@ -59,9 +55,6 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['actualiz
             registrarActividad($pdo, 'Técnico', 'Actualizar equipo portado', 'movimiento_equipo', $movimientoId, "Movimiento actualizado a {$estadoEquipo}; inventario sincronizado.");
             $mensaje = 'Estado del equipo actualizado e inventario sincronizado.';
         }
-    } elseif ($clienteNombreMovimiento === '' || $clienteNumeroMovimiento === '') {
-        $mensaje = 'Indica el nombre y número del cliente para actualizar este movimiento.';
-        $tipoMensaje = 'danger';
     }
 }
 
@@ -328,7 +321,7 @@ $tecnico = $tecnico->fetch();
                                         <span class="badge <?php echo badgeClass($orden['estado']); ?>"><?php echo htmlspecialchars($orden['estado']); ?></span>
                                     </div>
                                     <div class="order-facts">
-                                        <div><span>Equipo</span><?php echo htmlspecialchars($orden['tipo']); ?> · <?php echo htmlspecialchars($orden['marca'] ?: 'Sin marca'); ?></div>
+                                        <div><span>Equipo</span><?php echo htmlspecialchars((string)($orden['tipo'] ?? 'Sin tipo'), ENT_QUOTES, 'UTF-8'); ?> · <?php echo htmlspecialchars($orden['marca'] ?: 'Sin marca'); ?></div>
                                         <div><span>Cliente</span><?php echo htmlspecialchars($orden['cliente_nombre'] ?: 'Sin nombre'); ?> · <?php echo htmlspecialchars($orden['cliente_numero'] ?: 'Sin teléfono'); ?></div>
                                         <div><span>Dirección</span><?php echo htmlspecialchars(trim(($orden['calle'] ?: '') . ' ' . ($orden['numero_exterior'] ?: '') . ', ' . ($orden['colonia'] ?: '')) ?: 'Sin domicilio'); ?></div>
                                         <div><span>IP asignada</span><?php echo htmlspecialchars($orden['ip_asignada'] ?: 'Sin IP'); ?></div>
@@ -454,8 +447,8 @@ $tecnico = $tecnico->fetch();
                             <select name="movimiento_id" required>
                                 <option value="">Seleccione</option>
                                 <?php foreach ($movimientosTecnico as $movimiento): ?>
-                                    <option value="<?php echo (int)$movimiento['id']; ?>" data-cliente-nombre="<?php echo htmlspecialchars($movimiento['cliente_nombre'] ?? '', ENT_QUOTES); ?>" data-cliente-numero="<?php echo htmlspecialchars($movimiento['cliente_numero'] ?? '', ENT_QUOTES); ?>">
-                                        <?php echo htmlspecialchars($movimiento['tipo']); ?> · Orden #<?php echo (int)$movimiento['orden_id']; ?> · <?php echo htmlspecialchars($movimiento['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($movimiento['estado']); ?>
+                                    <option value="<?php echo (int)$movimiento['id']; ?>">
+                                        <?php echo htmlspecialchars($movimiento['tipo']); ?> · Orden #<?php echo (int)$movimiento['orden_id']; ?> · <?php echo htmlspecialchars($movimiento['estado']); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -470,16 +463,6 @@ $tecnico = $tecnico->fetch();
                                 <option value="devuelto">Devuelto a tienda</option>
                             </select>
                         </label>
-                        <div class="form-grid">
-                            <label>
-                                <span>Nombre del cliente</span>
-                                <input type="text" name="movimiento_cliente_nombre" maxlength="150" required>
-                            </label>
-                            <label>
-                                <span>Número del cliente</span>
-                                <input type="tel" name="movimiento_cliente_numero" maxlength="40" required>
-                            </label>
-                        </div>
                         <label>
                             <span>Detalle de la situación</span>
                             <textarea name="equipo_observaciones_actualizacion" placeholder="Indica por qué no se utilizó o qué falla presentó."></textarea>
@@ -560,14 +543,6 @@ $tecnico = $tecnico->fetch();
             });
         }
         const capturarUbicacion = document.getElementById('capturarUbicacion');
-        const movimientoEstadoSelect = document.querySelector('select[name="movimiento_id"]');
-        const movimientoClienteNombre = document.querySelector('input[name="movimiento_cliente_nombre"]');
-        const movimientoClienteNumero = document.querySelector('input[name="movimiento_cliente_numero"]');
-        movimientoEstadoSelect?.addEventListener('change', () => {
-            const opcion = movimientoEstadoSelect.selectedOptions[0];
-            movimientoClienteNombre.value = opcion?.dataset.clienteNombre || '';
-            movimientoClienteNumero.value = opcion?.dataset.clienteNumero || '';
-        });
         if (capturarUbicacion) {
             capturarUbicacion.addEventListener('click', () => {
                 if (!navigator.geolocation) {

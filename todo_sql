@@ -1,4 +1,10 @@
-CREATE DATABASE IF NOT EXISTS compuser_inventario CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+-- Script completo para una instalacion nueva de Compuser.
+-- Ejecuta este archivo una sola vez desde phpMyAdmin o un cliente MySQL.
+-- No elimina datos existentes: las tablas se crean si todavia no existen.
+
+CREATE DATABASE IF NOT EXISTS compuser_inventario
+    CHARACTER SET utf8mb4
+    COLLATE utf8mb4_general_ci;
 USE compuser_inventario;
 
 CREATE TABLE IF NOT EXISTS usuarios (
@@ -28,6 +34,7 @@ CREATE TABLE IF NOT EXISTS equipos (
     INDEX idx_equipos_estado_updated (estado, updated_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Clientes se guardan una sola vez y se relacionan por cliente_id.
 CREATE TABLE IF NOT EXISTS clientes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(150) NOT NULL,
@@ -47,6 +54,7 @@ CREATE TABLE IF NOT EXISTS ordenes (
     equipo_id INT DEFAULT NULL,
     tecnico_id INT NOT NULL,
     cliente_id INT DEFAULT NULL,
+    -- Campos de compatibilidad; cliente_id es la relacion normalizada con clientes.
     cliente_nombre VARCHAR(150) DEFAULT NULL,
     cliente_numero VARCHAR(40) DEFAULT NULL,
     calle VARCHAR(180) DEFAULT NULL,
@@ -62,9 +70,27 @@ CREATE TABLE IF NOT EXISTS ordenes (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_ordenes_tecnico_estado_created (tecnico_id, estado, created_at),
     INDEX idx_ordenes_estado_created (estado, created_at),
-    FOREIGN KEY (equipo_id) REFERENCES equipos(id) ON DELETE CASCADE,
-    FOREIGN KEY (tecnico_id) REFERENCES usuarios(id) ON DELETE CASCADE,
-    FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL
+    INDEX idx_ordenes_cliente_id (cliente_id),
+    CONSTRAINT fk_ordenes_equipo FOREIGN KEY (equipo_id) REFERENCES equipos(id) ON DELETE CASCADE,
+    CONSTRAINT fk_ordenes_tecnico FOREIGN KEY (tecnico_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    CONSTRAINT fk_ordenes_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS equipos_tecnico (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    equipo_id INT NOT NULL,
+    tecnico_id INT NOT NULL,
+    orden_id INT DEFAULT NULL,
+    cliente_nombre VARCHAR(150) DEFAULT NULL,
+    cliente_numero VARCHAR(40) DEFAULT NULL,
+    estado ENUM('portado', 'utilizado', 'no_utilizado', 'falla', 'devuelto') NOT NULL DEFAULT 'portado',
+    observaciones TEXT DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_equipos_tecnico_updated (tecnico_id, updated_at),
+    CONSTRAINT fk_equipos_tecnico_equipo FOREIGN KEY (equipo_id) REFERENCES equipos(id) ON DELETE CASCADE,
+    CONSTRAINT fk_equipos_tecnico_tecnico FOREIGN KEY (tecnico_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    CONSTRAINT fk_equipos_tecnico_orden FOREIGN KEY (orden_id) REFERENCES ordenes(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS reportes (
@@ -88,9 +114,10 @@ CREATE TABLE IF NOT EXISTS reportes (
     INDEX idx_reportes_tecnico_created (tecnico_id, created_at),
     INDEX idx_reportes_equipo_id (equipo_id),
     INDEX idx_reportes_movimiento_id (movimiento_id),
-    FOREIGN KEY (tecnico_id) REFERENCES usuarios(id) ON DELETE CASCADE,
-    FOREIGN KEY (orden_id) REFERENCES ordenes(id) ON DELETE SET NULL,
-    FOREIGN KEY (equipo_id) REFERENCES equipos(id) ON DELETE SET NULL
+    CONSTRAINT fk_reportes_tecnico FOREIGN KEY (tecnico_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    CONSTRAINT fk_reportes_orden FOREIGN KEY (orden_id) REFERENCES ordenes(id) ON DELETE SET NULL,
+    CONSTRAINT fk_reportes_equipo FOREIGN KEY (equipo_id) REFERENCES equipos(id) ON DELETE SET NULL,
+    CONSTRAINT fk_reportes_movimiento FOREIGN KEY (movimiento_id) REFERENCES equipos_tecnico(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS reporte_evidencias (
@@ -99,28 +126,8 @@ CREATE TABLE IF NOT EXISTS reporte_evidencias (
     foto_url VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_reporte_evidencias_reporte (reporte_id),
-    FOREIGN KEY (reporte_id) REFERENCES reportes(id) ON DELETE CASCADE
+    CONSTRAINT fk_reporte_evidencias_reporte FOREIGN KEY (reporte_id) REFERENCES reportes(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS equipos_tecnico (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    equipo_id INT NOT NULL,
-    tecnico_id INT NOT NULL,
-    orden_id INT DEFAULT NULL,
-    cliente_nombre VARCHAR(150) DEFAULT NULL,
-    cliente_numero VARCHAR(40) DEFAULT NULL,
-    estado ENUM('portado', 'utilizado', 'no_utilizado', 'falla', 'devuelto') NOT NULL DEFAULT 'portado',
-    observaciones TEXT DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_equipos_tecnico_updated (tecnico_id, updated_at),
-    FOREIGN KEY (equipo_id) REFERENCES equipos(id) ON DELETE CASCADE,
-    FOREIGN KEY (tecnico_id) REFERENCES usuarios(id) ON DELETE CASCADE,
-    FOREIGN KEY (orden_id) REFERENCES ordenes(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-ALTER TABLE reportes
-    ADD CONSTRAINT fk_reportes_movimiento FOREIGN KEY (movimiento_id) REFERENCES equipos_tecnico(id) ON DELETE SET NULL;
 
 CREATE TABLE IF NOT EXISTS actividad_log (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -136,15 +143,21 @@ CREATE TABLE IF NOT EXISTS actividad_log (
     INDEX idx_actividad_fecha (created_at),
     INDEX idx_actividad_modulo (modulo),
     INDEX idx_actividad_entidad (entidad, entidad_id),
-    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
+    CONSTRAINT fk_actividad_log_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Usuarios demo. Las contrasenas coinciden con las indicadas en README.md.
 INSERT INTO usuarios (usuario, nombre, rol, equipo, password) VALUES
-('admin', 'Administrador', 'admin', NULL, '$2y$10$43ex2TaVu4VPWNnKiHkjbuOXqc7ChUp80vwlFavr8RhQmGp1.bx/y'),
-('tienda', 'Tienda', 'tienda', NULL, '$2y$10$Qc5KeADKbuiJvZpMQlA6Men0OUX5Jr0ZnSkiBRaCb2OIdaQwZeDrq'),
-('santos', 'Santos', 'tecnico', 'Camioneta Azul', '$2y$10$o5bwekkwMxBymn8RRKKu3uxhQxHY8m.6fqBPst2snE3cy9xGcBSAe'),
-('jorge', 'Jorge', 'tecnico', 'Camioneta Azul', '$2y$10$LG1oPvYRbfClBV/fIa1vRO6mLkm0gw2CeVZw0g7w2QlUG4sF3IAeO'),
-('dario', 'Dario', 'tecnico', 'Coche Blanco', '$2y$10$KkUThtk8RX1sbkQqOXSFt.LAHi.hnEwaDpzmQ5jUAn.irW.5D8Xq2'),
-('kevin', 'Kevin', 'tecnico', 'Coche Blanco', '$2y$10$Ck6lDvdCtBC6BZ3P7SkYluFw5wEXK0B3fMTGyfNg3xyEs0TzvbqBW'),
-('joshua', 'Joshua', 'tecnico', NULL, '$2y$10$drRK7JXO1GDl0446xe1LBObBoxAO7euilm9oMZgaxHUIs.Oneaz6i')
+    ('admin', 'Administrador', 'admin', NULL, '$2y$10$43ex2TaVu4VPWNnKiHkjbuOXqc7ChUp80vwlFavr8RhQmGp1.bx/y'),
+    ('tienda', 'Tienda', 'tienda', NULL, '$2y$10$Qc5KeADKbuiJvZpMQlA6Men0OUX5Jr0ZnSkiBRaCb2OIdaQwZeDrq'),
+    ('santos', 'Santos', 'tecnico', 'Camioneta Azul', '$2y$10$o5bwekkwMxBymn8RRKKu3uxhQxHY8m.6fqBPst2snE3cy9xGcBSAe'),
+    ('jorge', 'Jorge', 'tecnico', 'Camioneta Azul', '$2y$10$LG1oPvYRbfClBV/fIa1vRO6mLkm0gw2CeVZw0g7w2QlUG4sF3IAeO'),
+    ('dario', 'Dario', 'tecnico', 'Coche Blanco', '$2y$10$KkUThtk8RX1sbkQqOXSFt.LAHi.hnEwaDpzmQ5jUAn.irW.5D8Xq2'),
+    ('kevin', 'Kevin', 'tecnico', 'Coche Blanco', '$2y$10$Ck6lDvdCtBC6BZ3P7SkYluFw5wEXK0B3fMTGyfNg3xyEs0TzvbqBW'),
+    ('joshua', 'Joshua', 'tecnico', NULL, '$2y$10$drRK7JXO1GDl0446xe1LBObBoxAO7euilm9oMZgaxHUIs.Oneaz6i')
 ON DUPLICATE KEY UPDATE usuario = usuario;
+
+-- Comandos opcionales para verificar que se creo la base:
+-- SHOW TABLES;
+-- DESCRIBE clientes;
+-- SELECT id, usuario, nombre, rol, activo FROM usuarios;
