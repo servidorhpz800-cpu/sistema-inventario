@@ -125,7 +125,7 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
             $pdo->beginTransaction();
 
                 if ($ordenId !== null) {
-                    $ordenEquipo = $pdo->prepare('SELECT equipo_id, cliente_nombre, cliente_numero FROM ordenes WHERE id = :id AND tecnico_id = :tecnico_id LIMIT 1');
+                    $ordenEquipo = $pdo->prepare('SELECT equipo_id, cliente_nombre, cliente_numero, tipo_orden FROM ordenes WHERE id = :id AND tecnico_id = :tecnico_id LIMIT 1');
                     $ordenEquipo->execute(['id' => $ordenId, 'tecnico_id' => $tecnicoIdSesion]);
                     $datosOrden = $ordenEquipo->fetch();
                     if (!$datosOrden) {
@@ -135,8 +135,10 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
                         throw new RuntimeException('El equipo seleccionado pertenece a otra orden.');
                     }
                     $equipoDeOrden = $datosOrden['equipo_id'];
-                    $clienteNombreReporte = trim((string)$datosOrden['cliente_nombre']) ?: $clienteNombreReporte;
-                    $clienteNumeroReporte = trim((string)$datosOrden['cliente_numero']) ?: $clienteNumeroReporte;
+                    if ($datosOrden['tipo_orden'] !== 'instalacion') {
+                        $clienteNombreReporte = trim((string)$datosOrden['cliente_nombre']) ?: $clienteNombreReporte;
+                        $clienteNumeroReporte = trim((string)$datosOrden['cliente_numero']) ?: $clienteNumeroReporte;
+                    }
                 } else {
                     $equipoDeOrden = null;
                 }
@@ -147,6 +149,24 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
             }
             if ($clienteNombreReporte === '' || $clienteNumeroReporte === '') {
                 throw new RuntimeException('Debes indicar el nombre y número del cliente.');
+            }
+
+            if ($ordenId !== null && $datosOrden['tipo_orden'] === 'instalacion') {
+                $ordenClienteUpdate = $pdo->prepare('UPDATE ordenes SET cliente_nombre = :cliente_nombre, cliente_numero = :cliente_numero WHERE id = :id AND tecnico_id = :tecnico_id');
+                $ordenClienteUpdate->execute([
+                    'cliente_nombre' => $clienteNombreReporte,
+                    'cliente_numero' => $clienteNumeroReporte,
+                    'id' => $ordenId,
+                    'tecnico_id' => $tecnicoIdSesion,
+                ]);
+
+                $movimientosClienteUpdate = $pdo->prepare('UPDATE equipos_tecnico SET cliente_nombre = :cliente_nombre, cliente_numero = :cliente_numero WHERE orden_id = :orden_id AND tecnico_id = :tecnico_id');
+                $movimientosClienteUpdate->execute([
+                    'cliente_nombre' => $clienteNombreReporte,
+                    'cliente_numero' => $clienteNumeroReporte,
+                    'orden_id' => $ordenId,
+                    'tecnico_id' => $tecnicoIdSesion,
+                ]);
             }
 
             $equipoIdReporte = $movimientoReporte
