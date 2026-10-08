@@ -364,7 +364,7 @@ $tecnico = $tecnico->fetch();
                             <select name="orden_id">
                                 <option value="0">Sin orden específica</option>
                                 <?php foreach ($ordenes as $orden): ?>
-                                    <option value="<?php echo (int)$orden['id']; ?>" data-cliente-nombre="<?php echo htmlspecialchars($orden['cliente_nombre'] ?? '', ENT_QUOTES); ?>" data-cliente-numero="<?php echo htmlspecialchars($orden['cliente_numero'] ?? '', ENT_QUOTES); ?>"><?php echo htmlspecialchars($orden['tipo']); ?> - <?php echo htmlspecialchars($orden['tipo_orden']); ?></option>
+                                    <option value="<?php echo (int)$orden['id']; ?>" data-cliente-nombre="<?php echo htmlspecialchars($orden['cliente_nombre'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" data-cliente-numero="<?php echo htmlspecialchars($orden['cliente_numero'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars((string)($orden['tipo'] ?? 'Sin tipo'), ENT_QUOTES, 'UTF-8'); ?> - <?php echo htmlspecialchars((string)($orden['tipo_orden'] ?? 'Sin tipo de orden'), ENT_QUOTES, 'UTF-8'); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </label>
