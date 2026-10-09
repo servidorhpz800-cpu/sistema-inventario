@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS reportes (
     movimiento_id INT DEFAULT NULL,
     cliente_nombre VARCHAR(150) DEFAULT NULL,
     cliente_numero VARCHAR(40) DEFAULT NULL,
+    ciudad VARCHAR(120) DEFAULT NULL,
     titulo VARCHAR(180) NOT NULL,
     actividad_realizada TEXT DEFAULT NULL,
     materiales TEXT DEFAULT NULL,

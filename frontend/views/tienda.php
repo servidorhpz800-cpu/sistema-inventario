@@ -24,19 +24,69 @@
 
         <div class="container">
             <section class="hero">
-                <h1><?php echo $vistaTienda === 'clientes' ? 'Directorio de clientes' : 'Centro de despacho y registro'; ?></h1>
-                <p><?php echo $vistaTienda === 'clientes' ? 'Consulta los datos y domicilios de clientes para reutilizarlos al crear una orden.' : 'Agrega equipos, controla el stock y asigna órdenes a los técnicos.'; ?></p>
+                <h1><?php echo $vistaTienda === 'clientes' ? 'Directorio de clientes' : ($vistaTienda === 'historial' ? 'Historial de equipos' : 'Centro de despacho y registro'); ?></h1>
+                <p><?php echo $vistaTienda === 'clientes' ? 'Consulta los datos y domicilios de clientes para reutilizarlos al crear una orden.' : ($vistaTienda === 'historial' ? 'Consulta qué técnico utilizó cada equipo, con qué cliente y en qué ubicación.' : 'Agrega equipos, controla el stock y asigna órdenes a los técnicos.'); ?></p>
             </section>
 
             <nav class="admin-tabs tienda-tabs" aria-label="Secciones de tienda">
                 <a class="<?php echo $vistaTienda === 'operacion' ? 'active' : ''; ?>" href="tienda.php">Operación</a>
                 <a class="<?php echo $vistaTienda === 'clientes' ? 'active' : ''; ?>" href="tienda.php?vista=clientes">Clientes</a>
+                <a class="<?php echo $vistaTienda === 'historial' ? 'active' : ''; ?>" href="tienda.php?vista=historial">Historial de equipos</a>
                 <?php if ($vistaTienda === 'operacion'): ?>
                     <a class="<?php echo $archivadas ? 'active' : ''; ?>" href="tienda.php?archivo=1">Archivo diario</a>
                 <?php endif; ?>
             </nav>
 
-            <?php if ($vistaTienda === 'clientes'): ?>
+            <?php if ($vistaTienda === 'historial'): ?>
+            <section class="card equipment-history">
+                <div class="orders-toolbar">
+                    <div>
+                        <span class="eyebrow">Seguimiento de inventario</span>
+                        <h3>Quién usó cada equipo y dónde</h3>
+                    </div>
+                    <span class="badge info"><?php echo count($equiposEnCampo); ?> movimientos</span>
+                </div>
+                <?php if (empty($equiposEnCampo)): ?>
+                    <p class="form-note">Todavía no hay equipos despachados o usados registrados.</p>
+                <?php else: ?>
+                    <div class="order-list">
+                        <?php foreach ($equiposEnCampo as $movimiento): ?>
+                            <?php
+                            $direccionMovimiento = implode(', ', array_filter([
+                                trim(($movimiento['calle'] ?? '') . ' ' . ($movimiento['numero_exterior'] ?? '')),
+                                $movimiento['colonia'] ?? '',
+                                $movimiento['ciudad'] ?? '',
+                            ]));
+                            $urlMapaMovimiento = $movimiento['ubicacion_url'] ?? '';
+                            if ($urlMapaMovimiento === '' && $direccionMovimiento !== '') {
+                                $urlMapaMovimiento = 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($direccionMovimiento);
+                            }
+                            ?>
+                            <article class="order-item">
+                                <div class="order-item-head">
+                                    <div>
+                                        <span class="eyebrow"><?php echo htmlspecialchars($movimiento['tecnico']); ?></span>
+                                        <h4><?php echo htmlspecialchars($movimiento['tipo']); ?> · <?php echo htmlspecialchars($movimiento['marca'] ?: 'Sin marca'); ?></h4>
+                                    </div>
+                                    <span class="badge <?php echo badgeClass($movimiento['estado']); ?>"><?php echo htmlspecialchars(str_replace('_', ' ', $movimiento['estado'])); ?></span>
+                                </div>
+                                <div class="order-facts">
+                                    <div><span>Serial</span><?php echo htmlspecialchars($movimiento['serial'] ?: 'Sin serial'); ?></div>
+                                    <div><span>Orden</span><?php echo $movimiento['orden_numero'] ? '#' . (int)$movimiento['orden_numero'] : 'Sin orden específica'; ?></div>
+                                    <div><span>Cliente</span><?php echo htmlspecialchars($movimiento['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($movimiento['cliente_numero'] ?: 'Sin número'); ?></div>
+                                    <div><span>Pueblo o ciudad</span><?php echo htmlspecialchars($movimiento['ciudad'] ?: 'Ciudad no registrada'); ?></div>
+                                    <div><span>Ubicación</span><?php echo htmlspecialchars($direccionMovimiento ?: 'Domicilio no registrado'); ?></div>
+                                </div>
+                                <?php if ($urlMapaMovimiento !== ''): ?>
+                                    <a href="<?php echo htmlspecialchars($urlMapaMovimiento, ENT_QUOTES); ?>" target="_blank" rel="noopener" class="btn btn-secondary">Abrir mapa</a>
+                                <?php endif; ?>
+                                <?php if (!empty($movimiento['observaciones'])): ?><p class="order-description"><?php echo htmlspecialchars($movimiento['observaciones']); ?></p><?php endif; ?>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </section>
+            <?php elseif ($vistaTienda === 'clientes'): ?>
             <section class="card customer-directory">
                 <div class="orders-toolbar">
                     <div>
@@ -59,11 +109,19 @@
                                 <tr><td colspan="8">Los clientes se guardarán aquí al crear su primera orden.</td></tr>
                             <?php else: ?>
                                 <?php foreach ($clientes as $cliente): ?>
+                                    <?php
+                                    $direccionCliente = implode(', ', array_filter([
+                                        trim($cliente['calle'] . ' ' . ($cliente['numero_exterior'] ?: '')),
+                                        $cliente['colonia'] ?: '',
+                                        $cliente['ciudad'] ?: '',
+                                    ]));
+                                    $urlMapaCliente = $cliente['ubicacion_url'] ?: 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($direccionCliente);
+                                    ?>
                                     <?php $busquedaCliente = strtolower(trim($cliente['nombre'] . ' ' . $cliente['numero'] . ' ' . $cliente['calle'] . ' ' . ($cliente['numero_exterior'] ?? '') . ' ' . ($cliente['colonia'] ?? '') . ' ' . ($cliente['ciudad'] ?? ''))); ?>
                                     <tr data-client-search="<?php echo htmlspecialchars($busquedaCliente, ENT_QUOTES); ?>">
                                         <td><?php echo htmlspecialchars($cliente['nombre']); ?></td>
                                         <td><a href="tel:<?php echo htmlspecialchars($cliente['numero']); ?>"><?php echo htmlspecialchars($cliente['numero']); ?></a></td>
-                                        <td><?php echo htmlspecialchars(trim($cliente['calle'] . ' ' . ($cliente['numero_exterior'] ?: '') . ', ' . ($cliente['colonia'] ?: ''))); ?><?php if (!empty($cliente['ubicacion_url'])): ?><br><a href="<?php echo htmlspecialchars($cliente['ubicacion_url']); ?>" target="_blank" rel="noopener">Abrir mapa</a><?php endif; ?></td>
+                                        <td><?php echo htmlspecialchars(trim($cliente['calle'] . ' ' . ($cliente['numero_exterior'] ?: '') . ', ' . ($cliente['colonia'] ?: ''))); ?><br><?php if ($cliente['ubicacion_url'] || $direccionCliente !== ''): ?><a href="<?php echo htmlspecialchars($urlMapaCliente, ENT_QUOTES); ?>" target="_blank" rel="noopener">Ver ubicación en mapa</a><?php else: ?>Ubicación no registrada<?php endif; ?></td>
                                         <td><?php echo htmlspecialchars($cliente['ciudad'] ?: 'Sin ciudad registrada'); ?></td>
                                         <td><?php echo htmlspecialchars($cliente['ip_asignada'] ?: 'Sin IP registrada'); ?></td>
                                         <td><?php echo htmlspecialchars($cliente['referencias'] ?: '-'); ?></td>
@@ -381,34 +439,6 @@
                 </form>
             </div>
 
-            <div class="card equipment-history stacked-panel">
-                <div class="orders-toolbar">
-                    <h3>Historial: quién usó cada equipo y dónde</h3>
-                    <span class="badge info"><?php echo count($equiposEnCampo); ?> movimientos</span>
-                </div>
-                <div class="order-list">
-                    <?php foreach ($equiposEnCampo as $movimiento): ?>
-                        <article class="order-item">
-                            <div class="order-item-head">
-                                <div>
-                                    <span class="eyebrow"><?php echo htmlspecialchars($movimiento['tecnico']); ?></span>
-                                    <h4><?php echo htmlspecialchars($movimiento['tipo']); ?> · <?php echo htmlspecialchars($movimiento['marca'] ?: 'Sin marca'); ?></h4>
-                                </div>
-                                <span class="badge <?php echo badgeClass($movimiento['estado']); ?>"><?php echo htmlspecialchars(str_replace('_', ' ', $movimiento['estado'])); ?></span>
-                            </div>
-                            <div class="order-facts">
-                                <div><span>Serial</span><?php echo htmlspecialchars($movimiento['serial'] ?: 'Sin serial'); ?></div>
-                                <div><span>Orden</span><?php echo $movimiento['orden_numero'] ? '#' . (int)$movimiento['orden_numero'] : 'Sin orden específica'; ?></div>
-                                <div><span>Cliente</span><?php echo htmlspecialchars($movimiento['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($movimiento['cliente_numero'] ?: 'Sin número'); ?></div>
-                                <div><span>Pueblo o ciudad</span><?php echo htmlspecialchars($movimiento['ciudad'] ?: 'Ciudad no registrada'); ?></div>
-                                <div><span>Ubicación</span><?php echo htmlspecialchars(trim(($movimiento['calle'] ?? '') . ' ' . ($movimiento['numero_exterior'] ?? '') . ' ' . ($movimiento['colonia'] ?? '')) ?: 'Domicilio no registrado'); ?></div>
-                            </div>
-                            <?php if (!empty($movimiento['observaciones'])): ?><p class="order-description"><?php echo htmlspecialchars($movimiento['observaciones']); ?></p><?php endif; ?>
-                        </article>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-
             <div class="card orders-panel stacked-panel">
                 <div class="orders-toolbar">
                     <h3>Órdenes de trabajo</h3>
@@ -425,26 +455,38 @@
                 </div>
                 <div class="order-list">
                     <?php foreach ($ordenes as $orden): ?>
-                        <article class="order-item" data-order-type="<?php echo htmlspecialchars($orden['tipo_orden']); ?>">
-                            <div class="order-item-head">
+                        <?php
+                        $direccionOrden = implode(', ', array_filter([
+                            trim(($orden['calle'] ?? '') . ' ' . ($orden['numero_exterior'] ?? '')),
+                            $orden['colonia'] ?? '',
+                            $orden['ciudad'] ?? '',
+                        ]));
+                        $urlMapaOrden = $orden['ubicacion_url'] ?: ($direccionOrden !== ''
+                            ? 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($direccionOrden)
+                            : '');
+                        ?>
+                        <details class="order-item order-details" data-order-type="<?php echo htmlspecialchars($orden['tipo_orden']); ?>">
+                            <summary class="order-item-head">
                                 <div>
-                                    <span class="eyebrow">Orden #<?php echo (int)$orden['id']; ?></span>
-                                    <h4><?php echo htmlspecialchars(ucfirst($orden['tipo_orden'])); ?></h4>
+                                    <span class="eyebrow">Orden #<?php echo (int)$orden['id']; ?> · <?php echo htmlspecialchars($orden['tecnico']); ?></span>
+                                    <h4><?php echo htmlspecialchars(ucfirst($orden['tipo_orden'])); ?> · <?php echo htmlspecialchars($orden['cliente_nombre'] ?: 'Sin cliente'); ?></h4>
                                 </div>
                                 <span class="badge <?php echo badgeClass($orden['estado']); ?>"><?php echo htmlspecialchars($orden['estado']); ?></span>
+                            </summary>
+                            <div class="order-details-content">
+                                <div class="order-facts">
+                                    <div><span>Equipo</span><?php echo $orden['tipo'] ? htmlspecialchars($orden['tipo'] . ' · ' . ($orden['marca'] ?: 'Sin marca') . ' · ' . ($orden['serial'] ?: 'Sin serial')) : 'Se asigna desde despacho'; ?></div>
+                                    <div><span>Técnico</span><?php echo htmlspecialchars($orden['tecnico']); ?></div>
+                                    <div><span>Pueblo o ciudad</span><?php echo htmlspecialchars($orden['ciudad'] ?: 'Sin ciudad'); ?></div>
+                                    <div><span>Cliente</span><?php echo htmlspecialchars($orden['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($orden['cliente_numero'] ?: 'Sin teléfono'); ?></div>
+                                    <div><span>Dirección</span><?php echo htmlspecialchars(trim(($orden['calle'] ?: '') . ' ' . ($orden['numero_exterior'] ?: '') . ', ' . ($orden['colonia'] ?: '')) ?: 'Sin domicilio'); ?></div>
+                                </div>
+                                <?php if ($urlMapaOrden !== ''): ?>
+                                    <a href="<?php echo htmlspecialchars($urlMapaOrden, ENT_QUOTES); ?>" target="_blank" rel="noopener" class="btn btn-secondary">Abrir mapa</a>
+                                <?php endif; ?>
+                                <?php if (!empty($orden['descripcion'])): ?><p class="order-description"><?php echo htmlspecialchars($orden['descripcion']); ?></p><?php endif; ?>
                             </div>
-                            <div class="order-facts">
-                                <div><span>Equipo</span><?php echo $orden['tipo'] ? htmlspecialchars($orden['tipo'] . ' · ' . ($orden['marca'] ?: 'Sin marca')) : 'Se asigna desde despacho'; ?></div>
-                                <div><span>Técnico</span><?php echo htmlspecialchars($orden['tecnico']); ?></div>
-                                <div><span>Pueblo o ciudad</span><?php echo htmlspecialchars($orden['ciudad'] ?: 'Sin ciudad'); ?></div>
-                                <div><span>Cliente</span><?php echo htmlspecialchars($orden['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($orden['cliente_numero'] ?: 'Sin teléfono'); ?></div>
-                                <div><span>Dirección</span><?php echo htmlspecialchars(trim(($orden['calle'] ?: '') . ' ' . ($orden['numero_exterior'] ?: '') . ', ' . ($orden['colonia'] ?: '')) ?: 'Sin domicilio'); ?></div>
-                            </div>
-                            <?php if (!empty($orden['ubicacion_url'])): ?>
-                                <a href="<?php echo htmlspecialchars($orden['ubicacion_url']); ?>" target="_blank" rel="noopener" class="btn btn-secondary">Abrir mapa</a>
-                            <?php endif; ?>
-                            <?php if (!empty($orden['descripcion'])): ?><p class="order-description"><?php echo htmlspecialchars($orden['descripcion']); ?></p><?php endif; ?>
-                        </article>
+                        </details>
                     <?php endforeach; ?>
                 </div>
             </div>
@@ -517,30 +559,44 @@
                         <p>No hay reportes técnicos registrados todavía.</p>
                     <?php else: ?>
                         <?php foreach ($reportes as $reporte): ?>
-                            <?php $clienteClaveReporte = trim((string)$reporte['cliente_numero']) !== '' ? trim((string)$reporte['cliente_numero']) : 'nombre:' . strtolower(trim((string)($reporte['cliente_nombre'] ?: 'Sin cliente'))); ?>
-                            <article class="order-item" data-report-filter-row data-report-entry data-report-client="<?php echo htmlspecialchars($clienteClaveReporte, ENT_QUOTES); ?>" data-report-technician="<?php echo htmlspecialchars(strtolower(trim($reporte['tecnico'])), ENT_QUOTES); ?>">
-                                <div class="order-item-head">
+                            <?php
+                            $clienteClaveReporte = trim((string)$reporte['cliente_numero']) !== '' ? trim((string)$reporte['cliente_numero']) : 'nombre:' . strtolower(trim((string)($reporte['cliente_nombre'] ?: 'Sin cliente')));
+                            $direccionReporte = implode(', ', array_filter([
+                                trim(($reporte['calle'] ?? '') . ' ' . ($reporte['numero_exterior'] ?? '')),
+                                $reporte['colonia'] ?? '',
+                                $reporte['ciudad'] ?? '',
+                            ]));
+                            $urlMapaReporte = $reporte['latitud'] !== null && $reporte['longitud'] !== null
+                                ? 'https://www.google.com/maps?q=' . urlencode($reporte['latitud'] . ',' . $reporte['longitud'])
+                                : ($direccionReporte !== '' ? 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($direccionReporte) : '');
+                            ?>
+                            <details class="order-item order-details" data-report-filter-row data-report-entry data-report-client="<?php echo htmlspecialchars($clienteClaveReporte, ENT_QUOTES); ?>" data-report-technician="<?php echo htmlspecialchars(strtolower(trim($reporte['tecnico'])), ENT_QUOTES); ?>">
+                                <summary class="order-item-head">
                                     <div>
                                         <span class="eyebrow">Reporte #<?php echo (int)$reporte['id']; ?> · Orden <?php echo $reporte['orden_id'] ? '#' . (int)$reporte['orden_id'] : 'sin orden'; ?> · Movimiento <?php echo $reporte['movimiento_id'] ? '#' . (int)$reporte['movimiento_id'] : 'sin despacho'; ?></span>
-                                        <h4><?php echo htmlspecialchars($reporte['titulo']); ?></h4>
+                                        <h4><?php echo htmlspecialchars($reporte['titulo']); ?> · <?php echo htmlspecialchars($reporte['cliente_nombre'] ?: 'Sin cliente'); ?></h4>
                                     </div>
                                     <span class="badge <?php echo badgeClass($reporte['estado']); ?>"><?php echo htmlspecialchars($reporte['estado']); ?></span>
+                                </summary>
+                                <div class="order-details-content">
+                                    <div class="order-facts">
+                                        <div><span>Técnico</span><?php echo htmlspecialchars($reporte['tecnico']); ?></div>
+                                        <div><span>Servicio</span><?php echo htmlspecialchars(ucfirst($reporte['tipo_orden'] ?: 'Sin orden')); ?></div>
+                                        <div><span>Cliente</span><?php echo htmlspecialchars($reporte['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($reporte['cliente_numero'] ?: 'Sin número'); ?></div>
+                                        <div><span>Pueblo o ciudad</span><?php echo htmlspecialchars($reporte['ciudad'] ?: 'Sin ciudad'); ?></div>
+                                        <div><span>Domicilio</span><?php echo htmlspecialchars($direccionReporte ?: 'Sin domicilio registrado'); ?></div>
+                                        <div><span>Equipo</span><?php echo htmlspecialchars(trim(($reporte['equipo_tipo'] ?: '') . ' ' . ($reporte['equipo_marca'] ?: '') . ' ' . ($reporte['equipo_serial'] ?: '')) ?: 'Sin equipo'); ?></div>
+                                    </div>
+                                    <p class="order-description"><strong>Actividad:</strong> <?php echo htmlspecialchars($reporte['actividad_realizada'] ?: 'Sin detalle'); ?></p>
+                                    <p class="order-description"><strong>Resultado:</strong> <?php echo htmlspecialchars($reporte['resultado'] ?: 'Sin resultado'); ?></p>
+                                    <p class="order-description"><strong>Descripción:</strong> <?php echo htmlspecialchars($reporte['descripcion']); ?></p>
+                                    <?php if (!empty($reporte['materiales'])): ?><p class="order-description"><strong>Materiales:</strong> <?php echo htmlspecialchars($reporte['materiales']); ?></p><?php endif; ?>
+                                    <div class="inline-actions">
+                                        <?php foreach ($reporte['fotos'] as $indiceFoto => $foto): ?><a href="<?php echo htmlspecialchars($foto); ?>" target="_blank" rel="noopener" class="btn btn-secondary">Ver imagen <?php echo (int)($indiceFoto + 1); ?></a><?php endforeach; ?>
+                                        <?php if ($urlMapaReporte !== ''): ?><a href="<?php echo htmlspecialchars($urlMapaReporte, ENT_QUOTES); ?>" target="_blank" rel="noopener" class="btn btn-secondary">Ver ubicación</a><?php endif; ?>
+                                    </div>
                                 </div>
-                                <div class="order-facts">
-                                    <div><span>Técnico</span><?php echo htmlspecialchars($reporte['tecnico']); ?></div>
-                                    <div><span>Servicio</span><?php echo htmlspecialchars(ucfirst($reporte['tipo_orden'] ?: 'Sin orden')); ?></div>
-                                    <div><span>Cliente</span><?php echo htmlspecialchars($reporte['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($reporte['cliente_numero'] ?: 'Sin número'); ?></div>
-                                    <div><span>Equipo</span><?php echo htmlspecialchars(trim(($reporte['equipo_tipo'] ?: '') . ' ' . ($reporte['equipo_marca'] ?: '') . ' ' . ($reporte['equipo_serial'] ?: '')) ?: 'Sin equipo'); ?></div>
-                                </div>
-                                <p class="order-description"><strong>Actividad:</strong> <?php echo htmlspecialchars($reporte['actividad_realizada'] ?: 'Sin detalle'); ?></p>
-                                <p class="order-description"><strong>Resultado:</strong> <?php echo htmlspecialchars($reporte['resultado'] ?: 'Sin resultado'); ?></p>
-                                <p class="order-description"><strong>Descripción:</strong> <?php echo htmlspecialchars($reporte['descripcion']); ?></p>
-                                <?php if (!empty($reporte['materiales'])): ?><p class="order-description"><strong>Materiales:</strong> <?php echo htmlspecialchars($reporte['materiales']); ?></p><?php endif; ?>
-                                <div class="inline-actions">
-                                    <?php foreach ($reporte['fotos'] as $indiceFoto => $foto): ?><a href="<?php echo htmlspecialchars($foto); ?>" target="_blank" rel="noopener" class="btn btn-secondary">Ver imagen <?php echo (int)($indiceFoto + 1); ?></a><?php endforeach; ?>
-                                    <?php if ($reporte['latitud'] !== null && $reporte['longitud'] !== null): ?><a href="https://www.google.com/maps?q=<?php echo urlencode($reporte['latitud'] . ',' . $reporte['longitud']); ?>" target="_blank" rel="noopener" class="btn btn-secondary">Ver ubicación</a><?php endif; ?>
-                                </div>
-                            </article>
+                            </details>
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </div>

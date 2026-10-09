@@ -419,7 +419,7 @@ if (in_array($tipoExportacion, ['equipos', 'reportes', 'instalaciones', 'cliente
     exit;
 }
 $clientes = $pdo->query('SELECT c.*, COUNT(o.id) AS total_ordenes, MAX(o.created_at) AS ultima_visita, (SELECT o_ip.ip_asignada FROM ordenes o_ip WHERE o_ip.cliente_id = c.id AND o_ip.ip_asignada IS NOT NULL AND o_ip.ip_asignada <> \'\' ORDER BY o_ip.created_at DESC, o_ip.id DESC LIMIT 1) AS ip_asignada FROM clientes c LEFT JOIN ordenes o ON o.cliente_id = c.id GROUP BY c.id ORDER BY c.updated_at DESC, c.nombre ASC')->fetchAll();
-$equiposEnCampo = $pdo->query("SELECT et.*, e.tipo, e.marca, e.modelo, e.serial, u.nombre AS tecnico, o.id AS orden_numero, o.tipo_orden, COALESCE(et.cliente_nombre, o.cliente_nombre) AS cliente_nombre_actual, COALESCE(et.cliente_numero, o.cliente_numero) AS cliente_numero_actual FROM equipos_tecnico et JOIN equipos e ON e.id = et.equipo_id JOIN usuarios u ON u.id = et.tecnico_id LEFT JOIN ordenes o ON o.id = et.orden_id ORDER BY et.updated_at DESC")->fetchAll();
+$equiposEnCampo = $pdo->query("SELECT et.*, e.tipo, e.marca, e.modelo, e.serial, u.nombre AS tecnico, o.id AS orden_numero, o.tipo_orden, COALESCE(et.cliente_nombre, o.cliente_nombre) AS cliente_nombre_actual, COALESCE(et.cliente_numero, o.cliente_numero) AS cliente_numero_actual, COALESCE(NULLIF(TRIM(o.ciudad), ''), (SELECT r.ciudad FROM reportes r WHERE r.movimiento_id = et.id AND r.ciudad IS NOT NULL AND r.ciudad <> '' ORDER BY r.created_at DESC, r.id DESC LIMIT 1)) AS ciudad, o.calle, o.numero_exterior, o.colonia, o.ubicacion_url FROM equipos_tecnico et JOIN equipos e ON e.id = et.equipo_id JOIN usuarios u ON u.id = et.tecnico_id LEFT JOIN ordenes o ON o.id = et.orden_id ORDER BY et.updated_at DESC")->fetchAll();
 foreach ($equiposEnCampo as &$movimientoCampo) {
     $movimientoCampo['cliente_nombre'] = $movimientoCampo['cliente_nombre_actual'];
     $movimientoCampo['cliente_numero'] = $movimientoCampo['cliente_numero_actual'];
@@ -433,7 +433,7 @@ $stats = [
     'pendientes' => count(array_filter($ordenes, fn($item) => $item['estado'] === 'pendiente')),
 ];
 $vistaTienda = $_GET['vista'] ?? 'operacion';
-if (!in_array($vistaTienda, ['operacion', 'clientes'], true)) {
+if (!in_array($vistaTienda, ['operacion', 'clientes', 'historial'], true)) {
     $vistaTienda = 'operacion';
 }
 $resumenReportesClientes = $vistaTienda === 'operacion' ? getResumenReportesClientes($pdo) : [];

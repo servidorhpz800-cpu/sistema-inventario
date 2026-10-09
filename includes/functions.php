@@ -62,7 +62,7 @@ function getOrdenes(PDO $pdo, ?int $tecnicoId = null, bool $archivadas = false):
     $filtroArchivo = $archivadas
         ? "o.created_at < CURRENT_DATE AND o.estado <> 'pendiente'"
         : "(o.created_at >= CURRENT_DATE OR o.estado = 'pendiente')";
-    $sql = "SELECT o.*, e.tipo, e.marca, e.modelo, e.condicion, u.nombre AS tecnico FROM ordenes o LEFT JOIN equipos e ON e.id = o.equipo_id JOIN usuarios u ON u.id = o.tecnico_id WHERE o.tipo_orden <> 'revision' AND {$filtroArchivo}";
+    $sql = "SELECT o.*, e.tipo, e.marca, e.modelo, e.serial, e.condicion, u.nombre AS tecnico FROM ordenes o LEFT JOIN equipos e ON e.id = o.equipo_id JOIN usuarios u ON u.id = o.tecnico_id WHERE o.tipo_orden <> 'revision' AND {$filtroArchivo}";
 
     if ($tecnicoId !== null) {
         $sql .= ' AND o.tecnico_id = :tecnicoId';

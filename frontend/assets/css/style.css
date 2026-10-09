@@ -636,6 +636,40 @@ textarea {
     background: #fbfdff;
 }
 
+.order-details > summary {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.order-details > summary::-webkit-details-marker {
+    display: none;
+}
+
+.order-details > summary::after {
+    flex: 0 0 auto;
+    color: var(--primary);
+    content: "Ver detalles +";
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.order-details[open] > summary::after {
+    content: "Ocultar detalles −";
+}
+
+.order-details > summary:focus-visible {
+    outline: 3px solid rgba(37, 87, 214, 0.35);
+    outline-offset: 4px;
+}
+
+.order-details-content {
+    padding-top: 4px;
+}
+
 .order-item h4 {
     margin: 0;
     font-size: 1.05rem;
@@ -932,6 +966,15 @@ textarea {
 
     .order-item-head {
         gap: 8px;
+    }
+
+    .order-details > summary {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .order-details > summary::after {
+        width: 100%;
     }
 
     .badge {
