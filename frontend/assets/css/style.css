@@ -670,6 +670,28 @@ textarea {
     padding-top: 4px;
 }
 
+.client-location-preview {
+    display: grid;
+    gap: 5px;
+    margin: -4px 0 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #f2f6ff;
+    color: var(--text);
+    overflow-wrap: anywhere;
+}
+
+.client-location-preview[hidden] {
+    display: none;
+}
+
+.client-location-preview a {
+    width: fit-content;
+    color: var(--primary);
+    font-weight: 700;
+}
+
 .order-item h4 {
     margin: 0;
     font-size: 1.05rem;

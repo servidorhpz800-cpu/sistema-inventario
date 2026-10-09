@@ -509,6 +509,9 @@ const inventory = window.inventoryData;
 
         const tipoOrden = document.getElementById('tipoOrden');
         const clienteRegistrado = document.getElementById('clienteRegistrado');
+        const ubicacionClienteSeleccionado = document.getElementById('ubicacionClienteSeleccionado');
+        const direccionClienteSeleccionado = document.getElementById('direccionClienteSeleccionado');
+        const mapaClienteSeleccionado = document.getElementById('mapaClienteSeleccionado');
         const sections = document.querySelectorAll('[data-order-section]');
         const fields = document.querySelectorAll('[data-order-section] input, [data-order-section] textarea');
 
@@ -532,13 +535,17 @@ const inventory = window.inventoryData;
             actualizarFormularioOrden();
         }
 
-        clienteRegistrado?.addEventListener('change', () => {
+        function actualizarClienteSeleccionado() {
+            if (!clienteRegistrado) {
+                return;
+            }
             const option = clienteRegistrado.selectedOptions[0];
             const form = clienteRegistrado.closest('form');
             if (!option || !form) {
                 return;
             }
 
+            const esClienteRegistrado = option.value !== '0';
             for (const [fieldName, dataName] of Object.entries({
                 cliente_nombre: 'nombre',
                 cliente_numero: 'numero',
@@ -548,13 +555,56 @@ const inventory = window.inventoryData;
                 ciudad: 'ciudad',
                 referencias: 'referencias',
                 ubicacion_url: 'ubicacionUrl',
+                ip_asignada: 'ip',
             })) {
                 const field = form.querySelector(`[name="${fieldName}"]`);
                 if (field) {
-                    field.value = option.value === '0' ? '' : (option.dataset[dataName] || '');
+                    field.value = esClienteRegistrado ? (option.dataset[dataName] || '') : '';
                 }
             }
-        });
+
+            if (!ubicacionClienteSeleccionado || !direccionClienteSeleccionado || !mapaClienteSeleccionado) {
+                return;
+            }
+
+            if (!esClienteRegistrado) {
+                ubicacionClienteSeleccionado.hidden = true;
+                return;
+            }
+
+            const partesDireccion = [
+                [option.dataset.calle, option.dataset.numeroExterior].filter(Boolean).join(' '),
+                option.dataset.colonia,
+                option.dataset.ciudad,
+            ].filter(Boolean);
+            const direccion = partesDireccion.join(', ');
+            const mapaGuardado = option.dataset.ubicacionUrl || '';
+            let urlMapa = mapaGuardado;
+            if (urlMapa) {
+                try {
+                    const url = new URL(urlMapa, window.location.href);
+                    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+                        urlMapa = '';
+                    }
+                } catch {
+                    urlMapa = '';
+                }
+            }
+            urlMapa = urlMapa || (direccion
+                ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(direccion)}`
+                : '');
+
+            direccionClienteSeleccionado.textContent = direccion || 'El cliente no tiene una dirección registrada.';
+            mapaClienteSeleccionado.hidden = !urlMapa;
+            if (urlMapa) {
+                mapaClienteSeleccionado.href = urlMapa;
+                mapaClienteSeleccionado.textContent = urlMapa === mapaGuardado ? 'Abrir ubicación guardada' : 'Buscar domicilio en mapa';
+            }
+            ubicacionClienteSeleccionado.hidden = false;
+        }
+
+        clienteRegistrado?.addEventListener('change', actualizarClienteSeleccionado);
+        actualizarClienteSeleccionado();
 
         const buscarCliente = document.getElementById('buscarCliente');
         const filasClientes = Array.from(document.querySelectorAll('#tablaClientes tr[data-client-search]'));

@@ -96,6 +96,7 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
     $fotoUrl = null;
     $fotosTemporales = [];
     $fotosGuardadas = [];
+    $directorioFotos = null;
 
     $subidaFotos = $_FILES['foto_reporte'] ?? null;
     if ($subidaFotos !== null) {
@@ -221,7 +222,7 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
                 ? (int)$movimientoReporte['equipo_id']
                 : ($equipoDeOrden !== null ? (int)$equipoDeOrden : null);
 
-            $directorioFotos = dirname(__DIR__, 2) . '/uploads/reportes';
+            $directorioFotos = getReportesUploadDirectory();
             if ($fotosTemporales && !is_dir($directorioFotos) && !mkdir($directorioFotos, 0755, true) && !is_dir($directorioFotos)) {
                 throw new RuntimeException('No se pudo crear el directorio de evidencias.');
             }
@@ -230,7 +231,7 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
                 if (!move_uploaded_file($fotoTemporal['tmp_name'], $directorioFotos . '/' . $nombreFoto)) {
                     throw new RuntimeException('No se pudo guardar una de las evidencias.');
                 }
-                $fotosGuardadas[] = 'uploads/reportes/' . $nombreFoto;
+                $fotosGuardadas[] = $nombreFoto;
             }
             $fotoUrl = $fotosGuardadas[0] ?? null;
 
@@ -295,8 +296,11 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
                 $pdo->rollBack();
             }
             foreach ($fotosGuardadas as $fotoGuardada) {
-                if (is_file(dirname(__DIR__, 2) . '/' . $fotoGuardada)) {
-                    unlink(dirname(__DIR__, 2) . '/' . $fotoGuardada);
+                $rutaFotoGuardada = $directorioFotos !== null
+                    ? $directorioFotos . DIRECTORY_SEPARATOR . basename($fotoGuardada)
+                    : null;
+                if ($rutaFotoGuardada !== null && is_file($rutaFotoGuardada)) {
+                    unlink($rutaFotoGuardada);
                 }
             }
             error_log('No se pudo guardar el reporte técnico: ' . $error->getMessage());

@@ -196,8 +196,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_orden'])) {
     $clienteId = (int)($_POST['cliente_id'] ?? 0);
     $calle = trim($_POST['calle'] ?? '');
     $ciudad = trim($_POST['ciudad'] ?? '');
+    $numeroExterior = trim($_POST['numero_exterior'] ?? '');
+    $colonia = trim($_POST['colonia'] ?? '');
+    $referencias = trim($_POST['referencias'] ?? '');
+    $ubicacionUrl = trim($_POST['ubicacion_url'] ?? '');
     $ipAsignada = trim($_POST['ip_asignada'] ?? '');
-    if ($tecnicoId > 0 && in_array($tipoOrden, $tiposPermitidos, true) && $clienteNombre !== '' && $clienteNumero !== '' && $calle !== '' && $ciudad !== '') {
+    $clienteInvalido = false;
+    $clienteExistente = null;
+    if ($clienteId > 0) {
+        $clienteSeleccionado = $pdo->prepare('SELECT * FROM clientes WHERE id = :id LIMIT 1');
+        $clienteSeleccionado->execute(['id' => $clienteId]);
+        $clienteExistente = $clienteSeleccionado->fetch();
+        $clienteInvalido = !$clienteExistente;
+    } elseif ($clienteNumero !== '') {
+        $clienteSeleccionado = $pdo->prepare('SELECT * FROM clientes WHERE numero = :numero LIMIT 1');
+        $clienteSeleccionado->execute(['numero' => $clienteNumero]);
+        $clienteExistente = $clienteSeleccionado->fetch();
+        if ($clienteExistente) {
+            $clienteId = (int)$clienteExistente['id'];
+        }
+    }
+    if ($clienteExistente) {
+        $clienteNombre = $clienteNombre ?: (string)$clienteExistente['nombre'];
+        $clienteNumero = $clienteNumero ?: (string)$clienteExistente['numero'];
+        $calle = $calle ?: (string)$clienteExistente['calle'];
+        $numeroExterior = $numeroExterior ?: (string)($clienteExistente['numero_exterior'] ?? '');
+        $colonia = $colonia ?: (string)($clienteExistente['colonia'] ?? '');
+        $ciudad = $ciudad ?: (string)($clienteExistente['ciudad'] ?? '');
+        $referencias = $referencias ?: (string)($clienteExistente['referencias'] ?? '');
+        $ubicacionUrl = $ubicacionUrl ?: (string)($clienteExistente['ubicacion_url'] ?? '');
+    }
+
+    if (!$clienteInvalido && $tecnicoId > 0 && in_array($tipoOrden, $tiposPermitidos, true) && $clienteNombre !== '' && $clienteNumero !== '' && $calle !== '' && $ciudad !== '') {
         if ($ipAsignada !== '' && filter_var($ipAsignada, FILTER_VALIDATE_IP) === false) {
             $mensaje = 'La IP asignada no tiene un formato válido.';
             $tipoMensaje = 'danger';
@@ -208,11 +238,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_orden'])) {
                     'nombre' => $clienteNombre,
                     'numero' => $clienteNumero,
                     'calle' => $calle,
-                    'numero_exterior' => trim($_POST['numero_exterior'] ?? ''),
-                    'colonia' => trim($_POST['colonia'] ?? ''),
+                    'numero_exterior' => $numeroExterior,
+                    'colonia' => $colonia,
                     'ciudad' => $ciudad,
-                    'referencias' => trim($_POST['referencias'] ?? ''),
-                    'ubicacion_url' => trim($_POST['ubicacion_url'] ?? ''),
+                    'referencias' => $referencias,
+                    'ubicacion_url' => $ubicacionUrl,
                 ];
 
                 if ($clienteId > 0) {
@@ -271,9 +301,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_orden'])) {
             }
         }
     } else {
-        $mensaje = ($clienteNombre === '' || $clienteNumero === '' || $calle === '' || $ciudad === '')
+        $mensaje = $clienteInvalido
+            ? 'El cliente seleccionado ya no existe. Selecciónalo de nuevo.'
+            : (($clienteNombre === '' || $clienteNumero === '' || $calle === '' || $ciudad === '')
             ? 'Completa el nombre del cliente, teléfono, calle y pueblo o ciudad.'
-            : ($ipAsignada !== '' && filter_var($ipAsignada, FILTER_VALIDATE_IP) === false ? 'La IP asignada no tiene un formato válido.' : 'Debes seleccionar un técnico.');
+            : ($ipAsignada !== '' && filter_var($ipAsignada, FILTER_VALIDATE_IP) === false ? 'La IP asignada no tiene un formato válido.' : 'Debes seleccionar un técnico.'));
         $tipoMensaje = 'danger';
     }
 }
@@ -367,7 +399,7 @@ if (in_array($tipoExportacion, ['equipos', 'reportes', 'instalaciones', 'cliente
                     $reporte['estado'], $reporte['cliente_nombre'], $reporte['cliente_numero'], $reporte['ciudad'], $reporte['equipo_tipo'],
                     $reporte['equipo_marca'], $reporte['equipo_modelo'], $reporte['equipo_serial'], $reporte['titulo'],
                     $reporte['actividad_realizada'], $reporte['materiales'], $reporte['resultado'], $reporte['descripcion'],
-                    $reporte['latitud'], $reporte['longitud'], implode(' | ', $reporte['fotos']),
+                    $reporte['latitud'], $reporte['longitud'], implode(' | ', array_map('urlEvidenciaReporte', $reporte['fotos'])),
                 ];
             }
             break;

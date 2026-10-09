@@ -66,7 +66,15 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON compuser_inventario.* TO 'compuser_app'@
 
 Si ya tienes datos, haz primero un respaldo. No vuelvas a importar el esquema sobre una instalación antigua esperando que modifique tablas existentes. Si todavía faltan columnas de domicilio o reportes, aplica primero `database/migracion_domicilio_reportes.sql`; después aplica una sola vez `database/migracion_equipo_reportes.sql` para que Tienda y Admin muestren el módem seleccionado en cada reporte. Aplica también una sola vez `database/migracion_clientes.sql` para crear el directorio de clientes y asociar las órdenes existentes por teléfono. Ejecuta `database/migracion_indices.sql` una sola vez para añadir índices a esa base. En instalaciones existentes, aplica además `database/migracion_movimientos_evidencias.sql` para guardar el cliente por movimiento/reporte y habilitar varias imágenes por reporte. Aplica `database/migracion_ciudad.sql` para agregar la ciudad a clientes, órdenes y reportes; debe ejecutarse en la misma base de datos que usa la aplicación y antes de desplegar código que consulte `r.ciudad`. Si aparece `Unknown column 'r.ciudad'`, la migración todavía no se ha aplicado a esa base. No ejecutes estas migraciones en una base recién creada con `schema.sql` si sus tablas ya incluyen esos cambios.
 
-Las fotos de reportes se guardan como archivos bajo `uploads/reportes`; la base central guarda su ruta. Si ejecutas más de un servidor web, monta esa carpeta en almacenamiento compartido con permisos de escritura para Apache, o migra los archivos a un servicio de almacenamiento compartido. No se guardan imágenes binarias en MySQL para evitar inflar y ralentizar la base. La aplicación no impone un máximo de tamaño o cantidad de imágenes; esos límites, si los hay, dependen de PHP (`upload_max_filesize`, `post_max_size`, `max_file_uploads`) y del servidor web. Al enviar un reporte técnico con ubicación GPS, la ciudad y el enlace del mapa se actualizan en el registro del cliente y en la orden relacionada para reutilizarlos en futuras visitas.
+Las fotos de reportes e instalaciones se guardan como archivos; la base central conserva sus nombres. La aplicación no borra evidencias por antigüedad y las sirve mediante `evidencia.php`. Para que sobrevivan reinicios y nuevos despliegues, configura `COMPUSER_REPORTES_DIR` con una ruta absoluta en un disco persistente montado en el servidor. En Render, monta un Persistent Disk (por ejemplo en `/var/data`) y agrega la variable `COMPUSER_REPORTES_DIR=/var/data/compuser/reportes`; concede permisos de escritura a Apache (`www-data`). Antes de desplegar con el disco nuevo, haz un respaldo y copia las evidencias existentes desde `/var/www/html/uploads/reportes/` al directorio persistente:
+
+```sh
+mkdir -p /var/data/compuser/reportes
+cp -a /var/www/html/uploads/reportes/. /var/data/compuser/reportes/
+chown -R www-data:www-data /var/data/compuser/reportes
+```
+
+Si ejecutas más de un servidor web, la ruta debe apuntar a almacenamiento compartido entre todos ellos. Sin disco persistente, el directorio predeterminado bajo `uploads/reportes` puede perder sus archivos al reemplazarse el contenedor o el servidor. No se guardan imágenes binarias en MySQL para evitar inflar y ralentizar la base. La aplicación no impone un máximo de tamaño o cantidad de imágenes; esos límites, si los hay, dependen de PHP (`upload_max_filesize`, `post_max_size`, `max_file_uploads`) y del servidor web. Al enviar un reporte técnico con ubicación GPS, la ciudad y el enlace del mapa se actualizan en el registro del cliente y en la orden relacionada para reutilizarlos en futuras visitas.
 
 ## Funcionalidades
 
@@ -91,6 +99,7 @@ Las fotos de reportes se guardan como archivos bajo `uploads/reportes`; la base 
 - `includes/` - sesión y funciones compartidas
 - `config/` - configuración de base de datos
 - `uploads/reportes/` - evidencias adjuntas a reportes
+- `evidencia.php` - entrega evidencias autenticadas desde el almacenamiento configurado
 - `config/database.php` - conexión central configurable por variables de entorno
 - `database/schema.sql` - esquema completo para instalaciones nuevas
 - `database/migracion_domicilio_reportes.sql` - actualización de instalaciones anteriores

@@ -57,6 +57,37 @@ function getInventario(PDO $pdo): array
     return $stmt->fetchAll();
 }
 
+function getReportesUploadDirectory(): string
+{
+    $directorioConfigurado = getenv('COMPUSER_REPORTES_DIR');
+    if ($directorioConfigurado === false || trim($directorioConfigurado) === '') {
+        return dirname(__DIR__) . '/uploads/reportes';
+    }
+
+    $directorioConfigurado = trim($directorioConfigurado);
+    $esAbsoluto = str_starts_with($directorioConfigurado, '/')
+        || preg_match('/^(?:[A-Za-z]:[\\\\\/]|\\\\\\\\)/', $directorioConfigurado) === 1;
+    if (!$esAbsoluto) {
+        throw new RuntimeException('COMPUSER_REPORTES_DIR debe ser una ruta absoluta y persistente.');
+    }
+
+    return rtrim($directorioConfigurado, '/\\') ?: DIRECTORY_SEPARATOR;
+}
+
+function urlEvidenciaReporte(string $ruta): string
+{
+    if (preg_match('/^https?:\/\//i', $ruta) === 1) {
+        return $ruta;
+    }
+
+    $nombreArchivo = basename(str_replace('\\', '/', $ruta));
+    if (preg_match('/\A[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}\.(?:jpe?g|png|webp)\z/i', $nombreArchivo) !== 1) {
+        return '';
+    }
+
+    return 'evidencia.php?archivo=' . rawurlencode($nombreArchivo);
+}
+
 function getOrdenes(PDO $pdo, ?int $tecnicoId = null, bool $archivadas = false): array
 {
     $filtroArchivo = $archivadas

@@ -370,6 +370,10 @@
                                     <?php endforeach; ?>
                                 </select>
                             </label>
+                            <div class="client-location-preview" id="ubicacionClienteSeleccionado" aria-live="polite" hidden>
+                                <span id="direccionClienteSeleccionado"></span>
+                                <a id="mapaClienteSeleccionado" href="#" target="_blank" rel="noopener" hidden>Abrir ubicación guardada</a>
+                            </div>
                             <div class="form-grid">
                                 <label>
                                     <span>Cliente</span>
@@ -594,7 +598,7 @@
                                     <p class="order-description"><strong>Descripción:</strong> <?php echo htmlspecialchars($reporte['descripcion']); ?></p>
                                     <?php if (!empty($reporte['materiales'])): ?><p class="order-description"><strong>Materiales:</strong> <?php echo htmlspecialchars($reporte['materiales']); ?></p><?php endif; ?>
                                     <div class="inline-actions">
-                                        <?php foreach ($reporte['fotos'] as $indiceFoto => $foto): ?><a href="<?php echo htmlspecialchars($foto); ?>" target="_blank" rel="noopener" class="btn btn-secondary">Ver imagen <?php echo (int)($indiceFoto + 1); ?></a><?php endforeach; ?>
+                                        <?php foreach ($reporte['fotos'] as $indiceFoto => $foto): ?><?php $urlFoto = urlEvidenciaReporte((string)$foto); ?><?php if ($urlFoto !== ''): ?><a href="<?php echo htmlspecialchars($urlFoto, ENT_QUOTES); ?>" target="_blank" rel="noopener" class="btn btn-secondary">Ver imagen <?php echo (int)($indiceFoto + 1); ?></a><?php endif; ?><?php endforeach; ?>
                                         <?php if ($urlMapaReporte !== ''): ?><a href="<?php echo htmlspecialchars($urlMapaReporte, ENT_QUOTES); ?>" target="_blank" rel="noopener" class="btn btn-secondary">Ver ubicación</a><?php endif; ?>
                                     </div>
                                 </div>

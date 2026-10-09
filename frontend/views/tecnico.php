@@ -259,7 +259,7 @@
                                     </td>
                                     <td><?php echo htmlspecialchars($reporte['descripcion']); ?></td>
                                     <td>
-                                        <?php foreach ($reporte['fotos'] as $indiceFoto => $foto): ?><a href="<?php echo htmlspecialchars($foto); ?>" target="_blank" rel="noopener">Ver imagen <?php echo (int)($indiceFoto + 1); ?></a><br><?php endforeach; ?>
+                                        <?php foreach ($reporte['fotos'] as $indiceFoto => $foto): ?><?php $urlFoto = urlEvidenciaReporte((string)$foto); ?><?php if ($urlFoto !== ''): ?><a href="<?php echo htmlspecialchars($urlFoto, ENT_QUOTES); ?>" target="_blank" rel="noopener">Ver imagen <?php echo (int)($indiceFoto + 1); ?></a><br><?php endif; ?><?php endforeach; ?>
                                         <?php if ($reporte['latitud'] !== null && $reporte['longitud'] !== null): ?><a href="https://www.google.com/maps?q=<?php echo urlencode($reporte['latitud'] . ',' . $reporte['longitud']); ?>" target="_blank" rel="noopener">Ver ubicación</a><?php endif; ?>
                                     </td>
                                     <td><?php echo htmlspecialchars(date('d/m/Y H:i', strtotime($reporte['created_at']))); ?></td>
