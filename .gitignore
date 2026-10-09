@@ -1,3 +1,10 @@
 /config/database.local.php
-/uploads/reportes/*
+/database/migracion_clientes.sql
+/database/migracion_domicilio_reportes.sql
+/database/migracion_equipo_reportes.sql
+/database/migracion_indices.sql
+/database/migracion_moviumiento_evidencias.sql
+/database/schema.sql
+/compuser/todo_sql
+/database/uploads/reportes/*
 !/uploads/reportes/.gitkeep
