@@ -24,8 +24,8 @@
 
         <div class="container">
             <section class="hero">
-                <h1><?php echo $vistaTienda === 'clientes' ? 'Directorio de clientes' : ($vistaTienda === 'historial' ? 'Historial de equipos' : 'Centro de despacho y registro'); ?></h1>
-                <p><?php echo $vistaTienda === 'clientes' ? 'Consulta los datos y domicilios de clientes para reutilizarlos al crear una orden.' : ($vistaTienda === 'historial' ? 'Consulta qué técnico utilizó cada equipo, con qué cliente y en qué ubicación.' : 'Agrega equipos, controla el stock y asigna órdenes a los técnicos.'); ?></p>
+                <h1><?php echo $vistaTienda === 'clientes' ? 'Directorio de clientes' : ($vistaTienda === 'historial' ? 'Historial de equipos' : ($vistaTienda === 'historial_clientes' ? 'Historial por cliente' : 'Centro de despacho y registro')); ?></h1>
+                <p><?php echo $vistaTienda === 'clientes' ? 'Consulta los datos y domicilios de clientes para reutilizarlos al crear una orden.' : ($vistaTienda === 'historial' ? 'Consulta qué técnico utilizó cada equipo, con qué cliente y en qué ubicación.' : ($vistaTienda === 'historial_clientes' ? 'Consulta la frecuencia de reportes de cada cliente y qué técnicos lo atendieron.' : 'Agrega equipos, controla el stock y asigna órdenes a los técnicos.')); ?></p>
             </section>
 
             <nav class="admin-tabs tienda-tabs" aria-label="Secciones de tienda">
@@ -35,6 +35,7 @@
                     <a class="<?php echo $archivadas ? 'active' : ''; ?>" href="tienda.php?archivo=1">Archivo diario</a>
                 <?php endif; ?>
                 <a class="<?php echo $vistaTienda === 'historial' ? 'active' : ''; ?>" href="tienda.php?vista=historial">Historial de equipos</a>
+                <a class="<?php echo $vistaTienda === 'historial_clientes' ? 'active' : ''; ?>" href="tienda.php?vista=historial_clientes">Historial por cliente</a>
             </nav>
 
             <?php if ($vistaTienda === 'historial'): ?>
@@ -85,6 +86,38 @@
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
+            </section>
+            <?php elseif ($vistaTienda === 'historial_clientes'): ?>
+            <section class="card report-summary">
+                <div class="orders-toolbar">
+                    <div>
+                        <span class="eyebrow">Historial por cliente</span>
+                        <h3>Frecuencia de reportes y técnicos</h3>
+                    </div>
+                    <span class="badge info"><?php echo count($resumenReportesClientes); ?> clientes con reportes</span>
+                </div>
+                <div class="table-wrap">
+                    <table class="table">
+                        <thead>
+                            <tr><th>Cliente</th><th>Teléfono</th><th>Total de reportes</th><th>Técnicos que reportaron</th><th>Reporte más reciente</th></tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($resumenReportesClientes)): ?>
+                                <tr><td colspan="5">Todavía no hay reportes asociados a clientes.</td></tr>
+                            <?php else: ?>
+                                <?php foreach ($resumenReportesClientes as $resumenCliente): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($resumenCliente['cliente_nombre']); ?></td>
+                                        <td><?php echo htmlspecialchars($resumenCliente['cliente_numero'] ?: 'Sin número'); ?></td>
+                                        <td><span class="badge primary"><?php echo (int)$resumenCliente['total_reportes']; ?></span></td>
+                                        <td><?php echo htmlspecialchars($resumenCliente['tecnicos'] ?: 'Sin técnico'); ?></td>
+                                        <td><?php echo htmlspecialchars(date('d/m/Y H:i', strtotime($resumenCliente['ultimo_reporte']))); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
             </section>
             <?php elseif ($vistaTienda === 'clientes'): ?>
             <section class="card customer-directory">
@@ -521,37 +554,6 @@
                         </select>
                     </label>
                     <span class="badge info" data-report-visible-count aria-live="polite"><?php echo count($reportes); ?> reportes visibles</span>
-                </div>
-                <div class="report-summary">
-                    <div class="orders-toolbar">
-                        <div>
-                            <span class="eyebrow">Historial por cliente</span>
-                            <h3>Frecuencia de reportes y técnicos</h3>
-                        </div>
-                        <span class="badge info"><?php echo count($resumenReportesClientes); ?> clientes con reportes</span>
-                    </div>
-                    <div class="table-wrap">
-                        <table class="table">
-                            <thead>
-                                <tr><th>Cliente</th><th>Teléfono</th><th>Total de reportes</th><th>Técnicos que reportaron</th><th>Reporte más reciente</th></tr>
-                            </thead>
-                            <tbody>
-                                <?php if (empty($resumenReportesClientes)): ?>
-                                    <tr><td colspan="5">Todavía no hay reportes asociados a clientes.</td></tr>
-                                <?php else: ?>
-                                    <?php foreach ($resumenReportesClientes as $resumenCliente): ?>
-                                        <tr data-report-filter-row data-report-summary data-report-client="<?php echo htmlspecialchars($resumenCliente['cliente_clave'], ENT_QUOTES); ?>" data-report-technicians="<?php echo htmlspecialchars($resumenCliente['tecnicos_clave'], ENT_QUOTES); ?>" data-report-technician-counts="<?php echo htmlspecialchars(json_encode($resumenCliente['conteos_tecnicos'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), ENT_QUOTES); ?>">
-                                            <td><?php echo htmlspecialchars($resumenCliente['cliente_nombre']); ?></td>
-                                            <td><?php echo htmlspecialchars($resumenCliente['cliente_numero'] ?: 'Sin número'); ?></td>
-                                            <td><span class="badge primary" data-report-count><?php echo (int)$resumenCliente['total_reportes']; ?></span></td>
-                                            <td><?php echo htmlspecialchars($resumenCliente['tecnicos'] ?: 'Sin técnico'); ?></td>
-                                            <td><?php echo htmlspecialchars(date('d/m/Y H:i', strtotime($resumenCliente['ultimo_reporte']))); ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
                 </div>
                 <h3 class="report-detail-heading">Detalle de reportes</h3>
                 <div class="order-list">

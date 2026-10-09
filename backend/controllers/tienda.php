@@ -433,8 +433,10 @@ $stats = [
     'pendientes' => count(array_filter($ordenes, fn($item) => $item['estado'] === 'pendiente')),
 ];
 $vistaTienda = $_GET['vista'] ?? 'operacion';
-if (!in_array($vistaTienda, ['operacion', 'clientes', 'historial'], true)) {
+if (!in_array($vistaTienda, ['operacion', 'clientes', 'historial', 'historial_clientes'], true)) {
     $vistaTienda = 'operacion';
 }
-$resumenReportesClientes = $vistaTienda === 'operacion' ? getResumenReportesClientes($pdo) : [];
+$resumenReportesClientes = in_array($vistaTienda, ['operacion', 'historial_clientes'], true)
+    ? getResumenReportesClientes($pdo)
+    : [];
 ?>
