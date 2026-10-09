@@ -433,4 +433,5 @@ $vistaTienda = $_GET['vista'] ?? 'operacion';
 if (!in_array($vistaTienda, ['operacion', 'clientes'], true)) {
     $vistaTienda = 'operacion';
 }
+$resumenReportesClientes = $vistaTienda === 'operacion' ? getResumenReportesClientes($pdo) : [];
 ?>

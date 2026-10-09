@@ -80,12 +80,12 @@ function getReportes(PDO $pdo, ?int $tecnicoId = null, bool $archivadas = false)
     $filtroArchivo = $archivadas
         ? "r.created_at < CURRENT_DATE AND (o.id IS NULL OR o.estado <> 'pendiente')"
         : "(r.created_at >= CURRENT_DATE OR o.estado = 'pendiente')";
-    $sql = 'SELECT r.*, u.nombre AS tecnico, o.tipo_orden, o.estado AS orden_estado, COALESCE(r.cliente_nombre, o.cliente_nombre) AS cliente_nombre_actual, COALESCE(r.cliente_numero, o.cliente_numero) AS cliente_numero_actual, o.calle, o.numero_exterior, o.colonia, o.referencias, o.ubicacion_url, o.ip_asignada, e.tipo AS equipo_tipo, e.marca AS equipo_marca, e.modelo AS equipo_modelo, e.serial AS equipo_serial
+    $sql = "SELECT r.*, u.nombre AS tecnico, o.tipo_orden, o.estado AS orden_estado, COALESCE(NULLIF(TRIM(r.cliente_nombre), ''), o.cliente_nombre) AS cliente_nombre_actual, COALESCE(NULLIF(TRIM(r.cliente_numero), ''), o.cliente_numero) AS cliente_numero_actual, o.calle, o.numero_exterior, o.colonia, o.referencias, o.ubicacion_url, o.ip_asignada, e.tipo AS equipo_tipo, e.marca AS equipo_marca, e.modelo AS equipo_modelo, e.serial AS equipo_serial
         FROM reportes r
         JOIN usuarios u ON u.id = r.tecnico_id
         LEFT JOIN ordenes o ON o.id = r.orden_id
         LEFT JOIN equipos e ON e.id = COALESCE(r.equipo_id, o.equipo_id)
-        WHERE ' . $filtroArchivo;
+        WHERE {$filtroArchivo}";
 
     if ($tecnicoId !== null) {
         $stmt = $pdo->prepare($sql . ' AND r.tecnico_id = :tecnicoId ORDER BY r.created_at DESC');
@@ -121,6 +121,58 @@ function getReportes(PDO $pdo, ?int $tecnicoId = null, bool $archivadas = false)
     unset($reporte);
 
     return $reportes;
+}
+
+function getResumenReportesClientes(PDO $pdo): array
+{
+    $clienteNumero = "COALESCE(NULLIF(TRIM(r.cliente_numero), ''), NULLIF(TRIM(o.cliente_numero), ''), '')";
+    $clienteNombre = "COALESCE(NULLIF(TRIM(r.cliente_nombre), ''), NULLIF(TRIM(o.cliente_nombre), ''), 'Sin cliente')";
+    $clienteClave = "COALESCE(NULLIF(TRIM(r.cliente_numero), ''), NULLIF(TRIM(o.cliente_numero), ''), CONCAT('nombre:', LOWER(TRIM({$clienteNombre}))))";
+    $sql = "SELECT {$clienteClave} AS cliente_clave, {$clienteNombre} AS cliente_nombre, {$clienteNumero} AS cliente_numero,
+            u.nombre AS tecnico_nombre, LOWER(TRIM(u.nombre)) AS tecnico_clave,
+            COUNT(DISTINCT r.id) AS total_reportes_tecnico, MAX(r.created_at) AS ultimo_reporte
+        FROM reportes r
+        JOIN usuarios u ON u.id = r.tecnico_id
+        LEFT JOIN ordenes o ON o.id = r.orden_id
+        GROUP BY 1, 2, 3, 4, 5
+        ORDER BY cliente_nombre ASC";
+    $resumenes = [];
+    foreach ($pdo->query($sql)->fetchAll() as $fila) {
+        $clave = (string)$fila['cliente_clave'];
+        if (!isset($resumenes[$clave])) {
+            $resumenes[$clave] = [
+                'cliente_clave' => $clave,
+                'cliente_nombre' => $fila['cliente_nombre'],
+                'cliente_numero' => $fila['cliente_numero'],
+                'total_reportes' => 0,
+                'tecnicos' => [],
+                'tecnicos_clave' => [],
+                'conteos_tecnicos' => [],
+                'ultimo_reporte' => $fila['ultimo_reporte'],
+            ];
+        }
+
+        $tecnicoClave = (string)$fila['tecnico_clave'];
+        $resumenes[$clave]['total_reportes'] += (int)$fila['total_reportes_tecnico'];
+        $resumenes[$clave]['tecnicos'][$tecnicoClave] = $fila['tecnico_nombre'];
+        $resumenes[$clave]['tecnicos_clave'][$tecnicoClave] = $tecnicoClave;
+        $resumenes[$clave]['conteos_tecnicos'][$tecnicoClave] = ($resumenes[$clave]['conteos_tecnicos'][$tecnicoClave] ?? 0) + (int)$fila['total_reportes_tecnico'];
+        if ($fila['ultimo_reporte'] > $resumenes[$clave]['ultimo_reporte']) {
+            $resumenes[$clave]['ultimo_reporte'] = $fila['ultimo_reporte'];
+        }
+    }
+
+    foreach ($resumenes as &$resumen) {
+        $resumen['tecnicos'] = implode(', ', $resumen['tecnicos']);
+        $resumen['tecnicos_clave'] = implode('|', $resumen['tecnicos_clave']);
+    }
+    unset($resumen);
+
+    $resumenes = array_values($resumenes);
+    usort($resumenes, static function (array $a, array $b): int {
+        return $b['total_reportes'] <=> $a['total_reportes'] ?: strcasecmp($a['cliente_nombre'], $b['cliente_nombre']);
+    });
+    return $resumenes;
 }
 
 function getEquiposTecnico(PDO $pdo, ?int $tecnicoId = null): array

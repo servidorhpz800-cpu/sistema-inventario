@@ -63,8 +63,10 @@ const inventory = window.inventoryData;
 
                 if (parsed.serial && serialField) {
                     serialField.value = parsed.serial;
+                    serialField.dispatchEvent(new Event('input', { bubbles: true }));
                 } else if (targetInput) {
                     targetInput.value = serialValue;
+                    targetInput.dispatchEvent(new Event('input', { bubbles: true }));
                 }
 
                 if (parsed.model && modelField) {
@@ -360,6 +362,7 @@ const inventory = window.inventoryData;
                                     if (value) {
                                         const parsedValue = aplicarCodigoEscaneado(value, targetInput);
                                         targetInput.value = parsedValue;
+                                        targetInput.dispatchEvent(new Event('input', { bubbles: true }));
                                         stream.getTracks().forEach((track) => track.stop());
                                         container.remove();
                                         return;
@@ -403,6 +406,7 @@ const inventory = window.inventoryData;
                         const value = result && result.getText ? result.getText() : null;
                         if (value) {
                             targetInput.value = value;
+                            targetInput.dispatchEvent(new Event('input', { bubbles: true }));
                             showBarcodeResult(`Código leído desde la foto: <strong>${escapeHtml(value)}</strong>`, false);
                             return;
                         }
@@ -421,6 +425,7 @@ const inventory = window.inventoryData;
                         const value = barcodes[0].rawValue;
                         if (value) {
                             targetInput.value = value;
+                            targetInput.dispatchEvent(new Event('input', { bubbles: true }));
                             showBarcodeResult(`Código leído desde la foto: <strong>${escapeHtml(value)}</strong>`, false);
                             return;
                         }
@@ -449,6 +454,7 @@ const inventory = window.inventoryData;
 
                     if (resultado) {
                         targetInput.value = resultado;
+                        targetInput.dispatchEvent(new Event('input', { bubbles: true }));
                         showBarcodeResult(`Código leído desde la foto: <strong>${escapeHtml(resultado)}</strong>`, false);
                         return;
                     }

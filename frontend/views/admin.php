@@ -189,11 +189,12 @@
                             <label>
                                 <span>Número serial</span>
                                 <div class="serial-scanner-wrap">
-                                    <input type="text" name="serial" id="serialInputAdmin" value="<?php echo htmlspecialchars($equipoEditar['serial'] ?? ''); ?>">
+                                    <input type="text" name="serial" id="serialInputAdmin" value="<?php echo htmlspecialchars($equipoEditar['serial'] ?? ''); ?>" data-modem-serial autocomplete="off">
                                     <button type="button" class="btn btn-secondary" data-scan-target="serialInputAdmin">Escanear</button>
                                     <input type="file" accept="image/*" capture="environment" class="scan-file-input" data-scan-file-target="serialInputAdmin" hidden>
                                     <button type="button" class="btn btn-secondary scan-file-trigger" data-scan-file-trigger="serialInputAdmin">Desde foto</button>
                                 </div>
+                                <small class="modem-detection-result" data-modem-detection-result aria-live="polite">Conecta el lector USB y escanea el código en este campo para detectar el fabricante.</small>
                             </label>
                         </div>
 
@@ -282,7 +283,7 @@
                 </div>
             </div>
             <?php elseif ($pestana === 'reportes'): ?>
-            <div class="card reports-panel">
+            <div class="card reports-panel" data-report-filters>
                 <div class="orders-toolbar">
                     <div>
                         <span class="eyebrow">Detalle de operaciones</span>
@@ -290,7 +291,63 @@
                     </div>
                     <span class="badge info"><?php echo count($reportes); ?> reportes</span>
                 </div>
-                <p class="form-note">Consulta completa de instalaciones, retiros, recogidas y reportes de clientes. Esta sección es de solo lectura.</p>
+                <p class="form-note">El resumen es histórico y muestra cuántos reportes tiene cada cliente y cuántos envió cada técnico. El detalle se limita a los reportes cargados en esta sección.</p>
+                <div class="report-filter-bar">
+                    <label>
+                        <span>Filtrar por cliente</span>
+                        <select data-report-client-filter>
+                            <option value="">Todos los clientes</option>
+                            <?php foreach ($resumenReportesClientes as $resumenCliente): ?>
+                                <?php $etiquetaCliente = $resumenCliente['cliente_nombre'] . ($resumenCliente['cliente_numero'] !== '' ? ' · ' . $resumenCliente['cliente_numero'] : ''); ?>
+                                <option value="<?php echo htmlspecialchars($resumenCliente['cliente_clave'], ENT_QUOTES); ?>"><?php echo htmlspecialchars($etiquetaCliente); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Filtrar por técnico</span>
+                        <select data-report-technician-filter>
+                            <option value="">Todos los técnicos</option>
+                            <?php foreach ($usuarios as $usuario): ?>
+                                <?php if ($usuario['rol'] === 'tecnico'): ?>
+                                    <option value="<?php echo htmlspecialchars(strtolower(trim($usuario['nombre'])), ENT_QUOTES); ?>"><?php echo htmlspecialchars($usuario['nombre']); ?></option>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                    <span class="badge info" data-report-visible-count aria-live="polite"><?php echo count($reportes); ?> reportes visibles</span>
+                </div>
+                <div class="report-summary">
+                    <div class="orders-toolbar">
+                        <div>
+                            <span class="eyebrow">Historial por cliente</span>
+                            <h3>Frecuencia de reportes y técnicos</h3>
+                        </div>
+                        <span class="badge info"><?php echo count($resumenReportesClientes); ?> clientes con reportes</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="table">
+                            <thead>
+                                <tr><th>Cliente</th><th>Teléfono</th><th>Total de reportes</th><th>Técnicos que reportaron</th><th>Reporte más reciente</th></tr>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($resumenReportesClientes)): ?>
+                                    <tr><td colspan="5">Todavía no hay reportes asociados a clientes.</td></tr>
+                                <?php else: ?>
+                                    <?php foreach ($resumenReportesClientes as $resumenCliente): ?>
+                                        <tr data-report-filter-row data-report-summary data-report-client="<?php echo htmlspecialchars($resumenCliente['cliente_clave'], ENT_QUOTES); ?>" data-report-technicians="<?php echo htmlspecialchars($resumenCliente['tecnicos_clave'], ENT_QUOTES); ?>" data-report-technician-counts="<?php echo htmlspecialchars(json_encode($resumenCliente['conteos_tecnicos'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), ENT_QUOTES); ?>">
+                                            <td><?php echo htmlspecialchars($resumenCliente['cliente_nombre']); ?></td>
+                                            <td><?php echo htmlspecialchars($resumenCliente['cliente_numero'] ?: 'Sin número'); ?></td>
+                                            <td><span class="badge primary" data-report-count><?php echo (int)$resumenCliente['total_reportes']; ?></span></td>
+                                            <td><?php echo htmlspecialchars($resumenCliente['tecnicos'] ?: 'Sin técnico'); ?></td>
+                                            <td><?php echo htmlspecialchars(date('d/m/Y H:i', strtotime($resumenCliente['ultimo_reporte']))); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <h3 class="report-detail-heading">Detalle de reportes</h3>
                 <div class="table-wrap">
                     <table class="table">
                         <thead>
@@ -308,7 +365,8 @@
                                 <tr><td colspan="6">Todavía no hay reportes técnicos.</td></tr>
                             <?php else: ?>
                                 <?php foreach ($reportes as $reporte): ?>
-                                    <tr>
+                                    <?php $clienteClaveReporte = trim((string)$reporte['cliente_numero']) !== '' ? trim((string)$reporte['cliente_numero']) : 'nombre:' . strtolower(trim((string)($reporte['cliente_nombre'] ?: 'Sin cliente'))); ?>
+                                    <tr data-report-filter-row data-report-entry data-report-client="<?php echo htmlspecialchars($clienteClaveReporte, ENT_QUOTES); ?>" data-report-technician="<?php echo htmlspecialchars(strtolower(trim($reporte['tecnico'])), ENT_QUOTES); ?>">
                                         <td><?php echo htmlspecialchars(date('d/m/Y H:i', strtotime($reporte['created_at']))); ?><br><?php echo htmlspecialchars($reporte['tecnico']); ?><br><span class="badge <?php echo badgeClass($reporte['estado']); ?>"><?php echo htmlspecialchars($reporte['estado']); ?></span></td>
                                         <td><strong><?php echo htmlspecialchars($reporte['titulo']); ?></strong><br><?php echo htmlspecialchars($reporte['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($reporte['cliente_numero'] ?: 'Sin número'); ?><br><?php echo htmlspecialchars(ucfirst($reporte['tipo_orden'] ?: 'Sin orden')); ?> · Movimiento <?php echo $reporte['movimiento_id'] ? '#' . (int)$reporte['movimiento_id'] : 'sin despacho'; ?><br><?php echo htmlspecialchars(trim(($reporte['calle'] ?: '') . ' ' . ($reporte['numero_exterior'] ?: '') . ', ' . ($reporte['colonia'] ?: '')) ?: 'Sin domicilio'); ?></td>
                                         <td><?php echo htmlspecialchars(trim(($reporte['equipo_tipo'] ?: '') . ' ' . ($reporte['equipo_marca'] ?: '') . ' ' . ($reporte['equipo_serial'] ?: '')) ?: 'Sin equipo'); ?></td>
@@ -399,8 +457,9 @@
             <?php endif; ?>
         </div>
     </div>
-
     <script>window.inventoryAdminData = <?php echo json_encode($equipos, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;</script>
+    <script src="frontend/assets/js/report-filters.js" defer></script>
+    <script src="frontend/assets/js/modem-detection.js" defer></script>
     <script src="frontend/assets/js/admin.js" defer></script>
 </body>
 </html>

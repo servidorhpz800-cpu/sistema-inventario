@@ -262,6 +262,51 @@ button, input, select, textarea {
     margin-bottom: 0;
 }
 
+.report-filter-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+    align-items: end;
+    gap: 12px;
+    margin-top: 18px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: #f8fbff;
+}
+
+.report-filter-bar .badge {
+    justify-self: start;
+    margin-bottom: 8px;
+}
+
+.report-summary {
+    margin-top: 22px;
+}
+
+.report-summary .orders-toolbar h3 {
+    margin-top: 4px;
+}
+
+.report-detail-heading {
+    margin: 24px 0 0;
+}
+
+.modem-detection-result {
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 400;
+    line-height: 1.4;
+}
+
+.modem-detection-result[data-state="detected"] {
+    color: var(--success);
+    font-weight: 700;
+}
+
+.modem-detection-result[data-state="unknown"] {
+    color: var(--warning);
+}
+
 .data-transfer-panel hr {
     border: 0;
     border-top: 1px solid var(--border);
@@ -856,8 +901,22 @@ textarea {
 
     .scanner-box,
     .scanner-actions,
-    .import-equipment-form {
+    .import-equipment-form,
+    .report-filter-bar {
         width: 100%;
+    }
+
+    .report-filter-bar {
+        grid-template-columns: 1fr;
+        padding: 12px;
+    }
+
+    .report-filter-bar .badge {
+        margin-bottom: 0;
+    }
+
+    .report-summary {
+        margin-top: 16px;
     }
 
     .scanner-actions > *,

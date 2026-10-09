@@ -78,6 +78,8 @@ Las fotos de reportes se guardan como archivos bajo `uploads/reportes`; la base 
 - Seguimiento de órdenes
 - Directorio de clientes con domicilios, búsqueda y reutilización al crear órdenes
 - Reportes técnicos
+- Resumen de frecuencia de reportes por cliente, con filtro por cliente y técnico
+- Detección del fabricante al leer el serial con lector de códigos de barras USB
 - Roles separados por pantalla
 
 ## Archivos principales
@@ -101,3 +103,7 @@ Las fotos de reportes se guardan como archivos bajo `uploads/reportes`; la base 
 Mantén respaldos regulares de MySQL y de `uploads/reportes`. Las operaciones de esquema son manuales y deben ejecutarse antes de desplegar una versión que requiera nuevas columnas o tablas.
 
 En **Tienda > Operación**, las exportaciones CSV incluyen inventario, reportes, instalaciones y clientes. La exportación de reportes e instalaciones respeta la vista diaria o el archivo seleccionado. Para importar módems, descarga la plantilla CSV, completa el serial de cada equipo y cárgala desde la misma sección. Se aceptan archivos separados por coma o punto y coma, de hasta 5 MB y 5,000 equipos; los seriales ya registrados se omiten y los equipos nuevos quedan disponibles en Tienda.
+
+En **Admin > Reportes** y **Tienda > Operación**, el resumen muestra la cantidad histórica de reportes por cliente y el conteo por técnico; los filtros también permiten revisar el detalle visible. Al registrar un equipo, conecta un lector USB tipo teclado y escanea el serial en su campo. Se reconocen los prefijos `48575443` (Huawei), `TLPK` (TP-Link), `HWTC` (Telmex), `ALCL` (Nokia) y `V23`, `VSOL` o `GPON` (V-SOL). La detección completa automáticamente el fabricante y el tipo GPON cuando está disponible; los campos se pueden corregir manualmente.
+
+En **Admin > Reportes** y **Tienda > Operación**, el resumen muestra la cantidad histórica de reportes por cliente y los técnicos que los enviaron; los filtros también permiten revisar el detalle visible en la pantalla. Al registrar un equipo, conecta un lector USB tipo teclado y escanea el serial en su campo. Se reconocen los prefijos `48575443` (Huawei), `TLPK` (TP-Link), `HWTC` (Telmex), `ALCL` (Nokia) y `V23`, `VSOL` o `GPON` (V-SOL). La detección completa automáticamente el fabricante y el tipo GPON cuando está disponible; puedes corregir esos campos manualmente.

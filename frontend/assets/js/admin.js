@@ -270,6 +270,7 @@ const inventoryAdmin = window.inventoryAdminData;
                                     if (value) {
                                         const parsedValue = aplicarCodigoEscaneadoAdmin(value, targetInput);
                                         targetInput.value = parsedValue;
+                                        targetInput.dispatchEvent(new Event('input', { bubbles: true }));
                                         stream.getTracks().forEach((track) => track.stop());
                                         container.remove();
                                         return;
@@ -323,6 +324,7 @@ const inventoryAdmin = window.inventoryAdminData;
                         const value = result && result.getText ? result.getText() : null;
                         if (value) {
                             targetInput.value = value;
+                            targetInput.dispatchEvent(new Event('input', { bubbles: true }));
                             barcodeResultAdmin.innerHTML = `<div class="barcode-state ok">Código leído desde la foto: <strong>${escapeHtml(value)}</strong></div>`;
                             return;
                         }
@@ -341,6 +343,7 @@ const inventoryAdmin = window.inventoryAdminData;
                         const value = barcodes[0].rawValue;
                         if (value) {
                             targetInput.value = value;
+                            targetInput.dispatchEvent(new Event('input', { bubbles: true }));
                             barcodeResultAdmin.innerHTML = `<div class="barcode-state ok">Código leído desde la foto: <strong>${escapeHtml(value)}</strong></div>`;
                             return;
                         }
@@ -369,6 +372,7 @@ const inventoryAdmin = window.inventoryAdminData;
 
                     if (resultado) {
                         targetInput.value = resultado;
+                        targetInput.dispatchEvent(new Event('input', { bubbles: true }));
                         barcodeResultAdmin.innerHTML = `<div class="barcode-state ok">Código leído desde la foto: <strong>${escapeHtml(resultado)}</strong></div>`;
                         return;
                     }
