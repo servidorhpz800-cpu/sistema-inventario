@@ -7,6 +7,14 @@ requireLogin(['tienda', 'admin']);
 
 $mensaje = null;
 $tipoMensaje = 'success';
+$ubicacionUltimoReporteSql = "(SELECT CONCAT('https://www.google.com/maps?q=', r.latitud, ',', r.longitud)
+    FROM reportes r
+    LEFT JOIN ordenes orden_reporte ON orden_reporte.id = r.orden_id
+    WHERE r.latitud IS NOT NULL
+      AND r.longitud IS NOT NULL
+      AND (r.cliente_numero = c.numero OR orden_reporte.cliente_id = c.id)
+    ORDER BY r.created_at DESC, r.id DESC
+    LIMIT 1)";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['importar_modems'])) {
     $archivo = $_FILES['archivo_modems'] ?? null;
@@ -203,13 +211,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_orden'])) {
     $ipAsignada = trim($_POST['ip_asignada'] ?? '');
     $clienteInvalido = false;
     $clienteExistente = null;
+    $clienteQuery = "SELECT c.*, COALESCE(NULLIF(c.ubicacion_url, ''), {$ubicacionUltimoReporteSql}) AS ubicacion_url_actual FROM clientes c WHERE ";
     if ($clienteId > 0) {
-        $clienteSeleccionado = $pdo->prepare('SELECT * FROM clientes WHERE id = :id LIMIT 1');
+        $clienteSeleccionado = $pdo->prepare($clienteQuery . 'c.id = :id LIMIT 1');
         $clienteSeleccionado->execute(['id' => $clienteId]);
         $clienteExistente = $clienteSeleccionado->fetch();
         $clienteInvalido = !$clienteExistente;
     } elseif ($clienteNumero !== '') {
-        $clienteSeleccionado = $pdo->prepare('SELECT * FROM clientes WHERE numero = :numero LIMIT 1');
+        $clienteSeleccionado = $pdo->prepare($clienteQuery . 'c.numero = :numero LIMIT 1');
         $clienteSeleccionado->execute(['numero' => $clienteNumero]);
         $clienteExistente = $clienteSeleccionado->fetch();
         if ($clienteExistente) {
@@ -224,7 +233,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_orden'])) {
         $colonia = $colonia ?: (string)($clienteExistente['colonia'] ?? '');
         $ciudad = $ciudad ?: (string)($clienteExistente['ciudad'] ?? '');
         $referencias = $referencias ?: (string)($clienteExistente['referencias'] ?? '');
-        $ubicacionUrl = $ubicacionUrl ?: (string)($clienteExistente['ubicacion_url'] ?? '');
+        $ubicacionUrl = $ubicacionUrl ?: (string)($clienteExistente['ubicacion_url_actual'] ?? $clienteExistente['ubicacion_url'] ?? '');
     }
 
     if (!$clienteInvalido && $tecnicoId > 0 && in_array($tipoOrden, $tiposPermitidos, true) && $clienteNombre !== '' && $clienteNumero !== '' && $calle !== '' && $ciudad !== '') {
@@ -450,7 +459,12 @@ if (in_array($tipoExportacion, ['equipos', 'reportes', 'instalaciones', 'cliente
     fclose($salidaCsv);
     exit;
 }
-$clientes = $pdo->query('SELECT c.*, COUNT(o.id) AS total_ordenes, MAX(o.created_at) AS ultima_visita, (SELECT o_ip.ip_asignada FROM ordenes o_ip WHERE o_ip.cliente_id = c.id AND o_ip.ip_asignada IS NOT NULL AND o_ip.ip_asignada <> \'\' ORDER BY o_ip.created_at DESC, o_ip.id DESC LIMIT 1) AS ip_asignada FROM clientes c LEFT JOIN ordenes o ON o.cliente_id = c.id GROUP BY c.id ORDER BY c.updated_at DESC, c.nombre ASC')->fetchAll();
+$clientesSql = "SELECT c.*, COUNT(o.id) AS total_ordenes, MAX(o.created_at) AS ultima_visita,
+    (SELECT o_ip.ip_asignada FROM ordenes o_ip WHERE o_ip.cliente_id = c.id AND o_ip.ip_asignada IS NOT NULL AND o_ip.ip_asignada <> '' ORDER BY o_ip.created_at DESC, o_ip.id DESC LIMIT 1) AS ip_asignada,
+    COALESCE(NULLIF(c.ubicacion_url, ''), {$ubicacionUltimoReporteSql}) AS ubicacion_url_actual
+    FROM clientes c LEFT JOIN ordenes o ON o.cliente_id = c.id
+    GROUP BY c.id ORDER BY c.updated_at DESC, c.nombre ASC";
+$clientes = $pdo->query($clientesSql)->fetchAll();
 $equiposEnCampo = $pdo->query("SELECT et.*, e.tipo, e.marca, e.modelo, e.serial, u.nombre AS tecnico, o.id AS orden_numero, o.tipo_orden, COALESCE(et.cliente_nombre, o.cliente_nombre) AS cliente_nombre_actual, COALESCE(et.cliente_numero, o.cliente_numero) AS cliente_numero_actual, COALESCE(NULLIF(TRIM(o.ciudad), ''), (SELECT r.ciudad FROM reportes r WHERE r.movimiento_id = et.id AND r.ciudad IS NOT NULL AND r.ciudad <> '' ORDER BY r.created_at DESC, r.id DESC LIMIT 1)) AS ciudad, o.calle, o.numero_exterior, o.colonia, o.ubicacion_url FROM equipos_tecnico et JOIN equipos e ON e.id = et.equipo_id JOIN usuarios u ON u.id = et.tecnico_id LEFT JOIN ordenes o ON o.id = et.orden_id ORDER BY et.updated_at DESC")->fetchAll();
 foreach ($equiposEnCampo as &$movimientoCampo) {
     $movimientoCampo['cliente_nombre'] = $movimientoCampo['cliente_nombre_actual'];

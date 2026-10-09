@@ -365,7 +365,7 @@
                                             data-colonia="<?php echo htmlspecialchars($cliente['colonia'] ?? '', ENT_QUOTES); ?>"
                                             data-ciudad="<?php echo htmlspecialchars($cliente['ciudad'] ?? '', ENT_QUOTES); ?>"
                                             data-referencias="<?php echo htmlspecialchars($cliente['referencias'] ?? '', ENT_QUOTES); ?>"
-                                            data-ubicacion-url="<?php echo htmlspecialchars($cliente['ubicacion_url'] ?? '', ENT_QUOTES); ?>"
+                                            data-ubicacion-url="<?php echo htmlspecialchars($cliente['ubicacion_url_actual'] ?? $cliente['ubicacion_url'] ?? '', ENT_QUOTES); ?>"
                                             data-ip="<?php echo htmlspecialchars($cliente['ip_asignada'] ?? '', ENT_QUOTES); ?>"><?php echo htmlspecialchars($cliente['nombre'] . ' · ' . $cliente['numero']); ?></option>
                                     <?php endforeach; ?>
                                 </select>
