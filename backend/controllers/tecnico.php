@@ -71,8 +71,28 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
     $resultado = trim($_POST['resultado'] ?? '');
     $clienteNombreReporte = trim($_POST['cliente_nombre'] ?? '');
     $clienteNumeroReporte = trim($_POST['cliente_numero'] ?? '');
-    $latitud = filter_var($_POST['latitud'] ?? null, FILTER_VALIDATE_FLOAT);
-    $longitud = filter_var($_POST['longitud'] ?? null, FILTER_VALIDATE_FLOAT);
+    $latitudOriginal = trim((string)($_POST['latitud'] ?? ''));
+    $longitudOriginal = trim((string)($_POST['longitud'] ?? ''));
+    $latitud = $latitudOriginal !== '' ? filter_var($latitudOriginal, FILTER_VALIDATE_FLOAT) : null;
+    $longitud = $longitudOriginal !== '' ? filter_var($longitudOriginal, FILTER_VALIDATE_FLOAT) : null;
+    $ubicacionUrlReporte = null;
+    if ($latitudOriginal !== '' || $longitudOriginal !== '') {
+        if (
+            $latitud === false
+            || $longitud === false
+            || $latitud === null
+            || $longitud === null
+            || $latitud < -90
+            || $latitud > 90
+            || $longitud < -180
+            || $longitud > 180
+        ) {
+            $mensaje = 'Las coordenadas de ubicación no son válidas. Captura la ubicación de nuevo.';
+            $tipoMensaje = 'danger';
+        } else {
+            $ubicacionUrlReporte = 'https://www.google.com/maps?q=' . rawurlencode($latitud . ',' . $longitud);
+        }
+    }
     $fotoUrl = null;
     $fotosTemporales = [];
     $fotosGuardadas = [];
@@ -120,6 +140,7 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
     if ($titulo !== '' && $tipoMensaje === 'success') {
         try {
             $pdo->beginTransaction();
+            $datosOrden = null;
 
                 if ($ordenId !== null) {
                     $ordenEquipo = $pdo->prepare('SELECT equipo_id, cliente_id, cliente_nombre, cliente_numero, ciudad, tipo_orden FROM ordenes WHERE id = :id AND tecnico_id = :tecnico_id LIMIT 1');
@@ -152,21 +173,21 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
                 throw new RuntimeException('Debes indicar el pueblo o ciudad del servicio.');
             }
 
+            $clienteIdReporte = (int)($datosOrden['cliente_id'] ?? 0);
+            if ($clienteIdReporte === 0) {
+                $clientePorNumero = $pdo->prepare('SELECT id FROM clientes WHERE numero = :numero LIMIT 1');
+                $clientePorNumero->execute(['numero' => $clienteNumeroReporte]);
+                $clienteIdReporte = (int)$clientePorNumero->fetchColumn();
+            }
+
             if ($ordenId !== null && $datosOrden['tipo_orden'] === 'instalacion') {
-                $ordenClienteUpdate = $pdo->prepare('UPDATE ordenes SET cliente_nombre = :cliente_nombre, cliente_numero = :cliente_numero, ciudad = :ciudad WHERE id = :id AND tecnico_id = :tecnico_id');
+                $ordenClienteUpdate = $pdo->prepare('UPDATE ordenes SET cliente_nombre = :cliente_nombre, cliente_numero = :cliente_numero WHERE id = :id AND tecnico_id = :tecnico_id');
                 $ordenClienteUpdate->execute([
                     'cliente_nombre' => $clienteNombreReporte,
                     'cliente_numero' => $clienteNumeroReporte,
-                    'ciudad' => $ciudadReporte,
                     'id' => $ordenId,
                     'tecnico_id' => $tecnicoIdSesion,
                 ]);
-                if (!empty($datosOrden['cliente_id'])) {
-                    $pdo->prepare('UPDATE clientes SET ciudad = :ciudad WHERE id = :id')->execute([
-                        'ciudad' => $ciudadReporte,
-                        'id' => (int)$datosOrden['cliente_id'],
-                    ]);
-                }
 
                 $movimientosClienteUpdate = $pdo->prepare('UPDATE equipos_tecnico SET cliente_nombre = :cliente_nombre, cliente_numero = :cliente_numero WHERE orden_id = :orden_id AND tecnico_id = :tecnico_id');
                 $movimientosClienteUpdate->execute([
@@ -174,6 +195,25 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
                     'cliente_numero' => $clienteNumeroReporte,
                     'orden_id' => $ordenId,
                     'tecnico_id' => $tecnicoIdSesion,
+                ]);
+            }
+
+            if ($ordenId !== null) {
+                $ordenUbicacionUpdate = $pdo->prepare('UPDATE ordenes SET ciudad = :ciudad, ubicacion_url = COALESCE(:ubicacion_url, ubicacion_url) WHERE id = :id AND tecnico_id = :tecnico_id');
+                $ordenUbicacionUpdate->execute([
+                    'ciudad' => $ciudadReporte,
+                    'ubicacion_url' => $ubicacionUrlReporte,
+                    'id' => $ordenId,
+                    'tecnico_id' => $tecnicoIdSesion,
+                ]);
+            }
+
+            if ($clienteIdReporte > 0) {
+                $clienteUbicacionUpdate = $pdo->prepare('UPDATE clientes SET ciudad = :ciudad, ubicacion_url = COALESCE(:ubicacion_url, ubicacion_url) WHERE id = :id');
+                $clienteUbicacionUpdate->execute([
+                    'ciudad' => $ciudadReporte,
+                    'ubicacion_url' => $ubicacionUrlReporte,
+                    'id' => $clienteIdReporte,
                 ]);
             }
 

@@ -31,10 +31,10 @@
             <nav class="admin-tabs tienda-tabs" aria-label="Secciones de tienda">
                 <a class="<?php echo $vistaTienda === 'operacion' ? 'active' : ''; ?>" href="tienda.php">Operación</a>
                 <a class="<?php echo $vistaTienda === 'clientes' ? 'active' : ''; ?>" href="tienda.php?vista=clientes">Clientes</a>
-                <a class="<?php echo $vistaTienda === 'historial' ? 'active' : ''; ?>" href="tienda.php?vista=historial">Historial de equipos</a>
                 <?php if ($vistaTienda === 'operacion'): ?>
                     <a class="<?php echo $archivadas ? 'active' : ''; ?>" href="tienda.php?archivo=1">Archivo diario</a>
                 <?php endif; ?>
+                <a class="<?php echo $vistaTienda === 'historial' ? 'active' : ''; ?>" href="tienda.php?vista=historial">Historial de equipos</a>
             </nav>
 
             <?php if ($vistaTienda === 'historial'): ?>

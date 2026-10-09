@@ -161,6 +161,7 @@
                         <input type="hidden" name="latitud" id="latitudReporte">
                         <input type="hidden" name="longitud" id="longitudReporte">
                         <button type="button" id="capturarUbicacion" class="btn btn-secondary">Capturar ubicación actual</button>
+                        <p class="form-note">Al enviar el reporte, la ciudad y la ubicación GPS se guardarán en el cliente para facilitar próximas visitas.</p>
                         <button type="submit" name="guardar_reporte" class="btn btn-success">Enviar reporte</button>
                     </form>
                 </div>
