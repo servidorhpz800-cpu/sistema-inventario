@@ -72,6 +72,7 @@ Las fotos de reportes se guardan como archivos bajo `uploads/reportes`; la base 
 
 - Administración de inventario
 - Agregar, editar, eliminar equipos
+- Importar módems al stock desde CSV y exportar inventario, reportes, instalaciones y clientes desde Tienda
 - Estados: nuevo, medio uso, recogido, dañados, no sirven
 - Despacho de equipos a técnicos
 - Seguimiento de órdenes
@@ -81,10 +82,13 @@ Las fotos de reportes se guardan como archivos bajo `uploads/reportes`; la base 
 
 ## Archivos principales
 
-- `index.php` - login
-- `admin.php` - panel del administrador
-- `tienda.php` - gestión de stock y despacho
-- `tecnico.php` - órdenes y reportes de técnicos
+- `index.php`, `admin.php`, `tienda.php`, `tecnico.php` - puntos de entrada públicos; se conservan sus URLs
+- `backend/controllers/` - lógica de acceso, inventario y operaciones de cada pantalla
+- `frontend/views/` - plantillas PHP de las pantallas
+- `frontend/assets/css/` y `frontend/assets/js/` - estilos y scripts del navegador
+- `includes/` - sesión y funciones compartidas
+- `config/` - configuración de base de datos
+- `uploads/reportes/` - evidencias adjuntas a reportes
 - `config/database.php` - conexión central configurable por variables de entorno
 - `database/schema.sql` - esquema completo para instalaciones nuevas
 - `database/migracion_domicilio_reportes.sql` - actualización de instalaciones anteriores
@@ -95,3 +99,5 @@ Las fotos de reportes se guardan como archivos bajo `uploads/reportes`; la base 
 ## Importante
 
 Mantén respaldos regulares de MySQL y de `uploads/reportes`. Las operaciones de esquema son manuales y deben ejecutarse antes de desplegar una versión que requiera nuevas columnas o tablas.
+
+En **Tienda > Operación**, las exportaciones CSV incluyen inventario, reportes, instalaciones y clientes. La exportación de reportes e instalaciones respeta la vista diaria o el archivo seleccionado. Para importar módems, descarga la plantilla CSV, completa el serial de cada equipo y cárgala desde la misma sección. Se aceptan archivos separados por coma o punto y coma, de hasta 5 MB y 5,000 equipos; los seriales ya registrados se omiten y los equipos nuevos quedan disponibles en Tienda.

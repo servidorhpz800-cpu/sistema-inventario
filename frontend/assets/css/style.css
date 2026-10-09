@@ -235,6 +235,36 @@ button, input, select, textarea {
     margin-top: 24px;
 }
 
+.data-transfer-panel {
+    margin-top: 24px;
+}
+
+.data-transfer-panel .card-heading h3 {
+    margin-bottom: 0;
+}
+
+.data-transfer-panel hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+}
+
+.import-equipment-form {
+    display: flex;
+    align-items: end;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.import-equipment-form label {
+    flex: 1 1 280px;
+    margin: 0;
+}
+
+.import-equipment-form input[type="file"] {
+    width: 100%;
+}
+
 .scanner-box {
     display: flex;
     align-items: end;
