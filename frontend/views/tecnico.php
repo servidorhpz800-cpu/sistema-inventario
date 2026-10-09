@@ -210,7 +210,7 @@
             </div>
             <?php endif; ?>
 
-            <div class="card equipment-history" style="margin-top:24px;">
+            <div class="card equipment-history stacked-panel">
                 <div class="orders-toolbar">
                     <h3>Historial de equipos portados</h3>
                     <span class="badge info"><?php echo count($movimientosTecnico); ?> registros</span>
@@ -232,7 +232,7 @@
                 </div>
             </div>
 
-            <div class="card" style="margin-top:24px;">
+            <div class="card stacked-panel">
                 <h3>Historial de reportes</h3>
                 <div class="table-wrap">
                     <table class="table">

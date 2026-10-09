@@ -213,7 +213,7 @@
 
             </div>
 
-            <div class="card" style="margin-top:24px;">
+            <div class="card stacked-panel">
                 <h3>Inventario general</h3>
                 <div class="table-wrap">
                     <table class="table">

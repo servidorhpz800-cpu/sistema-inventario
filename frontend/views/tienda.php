@@ -354,7 +354,7 @@
                 </div>
             </div>
 
-            <div class="card dispatch-panel" style="margin-top:24px;">
+            <div class="card dispatch-panel stacked-panel">
                 <div class="card-heading">
                     <div>
                         <span class="eyebrow">Control de inventario en campo</span>
@@ -399,7 +399,7 @@
                 </form>
             </div>
 
-            <div class="card equipment-history" style="margin-top:24px;">
+            <div class="card equipment-history stacked-panel">
                 <div class="orders-toolbar">
                     <h3>Equipos que llevan los técnicos</h3>
                     <span class="badge info"><?php echo count($equiposEnCampo); ?> movimientos</span>
@@ -425,7 +425,7 @@
                 </div>
             </div>
 
-            <div class="card orders-panel" style="margin-top:24px;">
+            <div class="card orders-panel stacked-panel">
                 <div class="orders-toolbar">
                     <h3>Órdenes de trabajo</h3>
                     <label class="orders-filter">
@@ -464,7 +464,7 @@
                 </div>
             </div>
 
-            <div class="card reports-panel" style="margin-top:24px;">
+            <div class="card reports-panel stacked-panel">
                 <div class="orders-toolbar">
                     <div>
                         <span class="eyebrow">Seguimiento técnico</span>
