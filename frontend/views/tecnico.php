@@ -61,6 +61,7 @@
                                     <div class="order-facts">
                                         <div><span>Equipo</span><?php echo htmlspecialchars((string)($orden['tipo'] ?? 'Sin tipo'), ENT_QUOTES, 'UTF-8'); ?> · <?php echo htmlspecialchars($orden['marca'] ?: 'Sin marca'); ?></div>
                                         <div><span>Cliente</span><?php echo htmlspecialchars($orden['cliente_nombre'] ?: 'Sin nombre'); ?> · <?php echo htmlspecialchars($orden['cliente_numero'] ?: 'Sin teléfono'); ?></div>
+                                        <div><span>Pueblo o ciudad</span><?php echo htmlspecialchars($orden['ciudad'] ?: 'Sin ciudad'); ?></div>
                                         <div><span>Dirección</span><?php echo htmlspecialchars(trim(($orden['calle'] ?: '') . ' ' . ($orden['numero_exterior'] ?: '') . ', ' . ($orden['colonia'] ?: '')) ?: 'Sin domicilio'); ?></div>
                                         <div><span>IP asignada</span><?php echo htmlspecialchars($orden['ip_asignada'] ?: 'Sin IP'); ?></div>
                                     </div>
@@ -102,7 +103,7 @@
                             <select name="orden_id">
                                 <option value="0">Sin orden específica</option>
                                 <?php foreach ($ordenes as $orden): ?>
-                                    <option value="<?php echo (int)$orden['id']; ?>" data-cliente-nombre="<?php echo htmlspecialchars((string)($orden['cliente_nombre'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-cliente-numero="<?php echo htmlspecialchars((string)($orden['cliente_numero'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars((string)($orden['tipo'] ?? 'Sin tipo'), ENT_QUOTES, 'UTF-8'); ?> - <?php echo htmlspecialchars((string)($orden['tipo_orden'] ?? 'Sin tipo de orden'), ENT_QUOTES, 'UTF-8'); ?></option>
+                                    <option value="<?php echo (int)$orden['id']; ?>" data-cliente-nombre="<?php echo htmlspecialchars((string)($orden['cliente_nombre'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-cliente-numero="<?php echo htmlspecialchars((string)($orden['cliente_numero'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-ciudad="<?php echo htmlspecialchars((string)($orden['ciudad'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars((string)($orden['tipo'] ?? 'Sin tipo'), ENT_QUOTES, 'UTF-8'); ?> - <?php echo htmlspecialchars((string)($orden['tipo_orden'] ?? 'Sin tipo de orden'), ENT_QUOTES, 'UTF-8'); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </label>
@@ -111,7 +112,7 @@
                             <select name="movimiento_reporte_id">
                                 <option value="0">Sin equipo específico</option>
                                 <?php foreach ($movimientosTecnico as $movimiento): ?>
-                                    <option value="<?php echo (int)$movimiento['id']; ?>" data-cliente-nombre="<?php echo htmlspecialchars($movimiento['cliente_nombre'] ?? '', ENT_QUOTES); ?>" data-cliente-numero="<?php echo htmlspecialchars($movimiento['cliente_numero'] ?? '', ENT_QUOTES); ?>">
+                                    <option value="<?php echo (int)$movimiento['id']; ?>" data-cliente-nombre="<?php echo htmlspecialchars($movimiento['cliente_nombre'] ?? '', ENT_QUOTES); ?>" data-cliente-numero="<?php echo htmlspecialchars($movimiento['cliente_numero'] ?? '', ENT_QUOTES); ?>" data-ciudad="<?php echo htmlspecialchars($movimiento['ciudad'] ?? '', ENT_QUOTES); ?>">
                                         <?php echo htmlspecialchars($movimiento['tipo']); ?> · <?php echo htmlspecialchars($movimiento['marca'] ?: 'Sin marca'); ?> · <?php echo htmlspecialchars($movimiento['serial'] ?: 'Sin serial'); ?> · <?php echo htmlspecialchars($movimiento['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($movimiento['estado']); ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -125,6 +126,10 @@
                                 <label>
                                     <span>Número del cliente</span>
                                     <input type="tel" name="cliente_numero" maxlength="40" required>
+                                </label>
+                                <label>
+                                    <span>Pueblo o ciudad</span>
+                                    <input type="text" name="ciudad" maxlength="120" required>
                                 </label>
                             </div>
                         <label>
@@ -149,17 +154,10 @@
                             <textarea name="materiales" placeholder="Modem, conectores, cable, caja NAP, etc."></textarea>
                         </label>
                         <label>
-                            <span>Resultado de la visita</span>
-                            <textarea name="resultado" placeholder="Servicio funcionando, queda pendiente, equipo enviado a revisión..."></textarea>
-                        </label>
-                        <label>
-                            <span>Detalle</span>
-                            <textarea name="descripcion" placeholder="Describe la actividad realizada, observaciones, fallas y recomendaciones..."></textarea>
-                        </label>
-                        <label>
-                            <span>Imágenes de lo realizado (máximo 10)</span>
+                            <span>Imágenes de lo realizado</span>
                             <input type="file" name="foto_reporte[]" accept="image/jpeg,image/png,image/webp" capture="environment" multiple>
                         </label>
+                        <p class="form-note">Los límites de tamaño y cantidad de imágenes dependen de la configuración del servidor.</p>
                         <input type="hidden" name="latitud" id="latitudReporte">
                         <input type="hidden" name="longitud" id="longitudReporte">
                         <button type="button" id="capturarUbicacion" class="btn btn-secondary">Capturar ubicación actual</button>
@@ -253,6 +251,7 @@
                                     <td><span class="badge <?php echo badgeClass($reporte['estado']); ?>"><?php echo htmlspecialchars($reporte['estado']); ?></span></td>
                                     <td>
                                         <strong>Cliente:</strong> <?php echo htmlspecialchars($reporte['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($reporte['cliente_numero'] ?: 'Sin número'); ?><br>
+                                        <strong>Pueblo o ciudad:</strong> <?php echo htmlspecialchars($reporte['ciudad'] ?: 'Sin ciudad'); ?><br>
                                         <?php echo htmlspecialchars($reporte['actividad_realizada'] ?: 'Sin actividad detallada'); ?><br>
                                         <strong>Resultado:</strong> <?php echo htmlspecialchars($reporte['resultado'] ?: 'Sin resultado'); ?><br>
                                         <strong>Materiales:</strong> <?php echo htmlspecialchars($reporte['materiales'] ?: 'Ninguno'); ?>

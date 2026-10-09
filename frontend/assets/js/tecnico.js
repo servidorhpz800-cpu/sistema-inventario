@@ -29,11 +29,17 @@ const filtroOrdenes = document.getElementById('filtroOrdenes');
         const movimientoReporteSelect = document.querySelector('#reporteTecnicoForm select[name="movimiento_reporte_id"]');
         const clienteNombreReporte = document.querySelector('#reporteTecnicoForm input[name="cliente_nombre"]');
         const clienteNumeroReporte = document.querySelector('#reporteTecnicoForm input[name="cliente_numero"]');
+        const ciudadReporte = document.querySelector('#reporteTecnicoForm input[name="ciudad"]');
         const completarClienteReporte = (select) => {
             const opcion = select?.selectedOptions[0];
             if (opcion && opcion.value !== '0') {
                 clienteNombreReporte.value = opcion.dataset.clienteNombre || '';
                 clienteNumeroReporte.value = opcion.dataset.clienteNumero || '';
+                ciudadReporte.value = opcion.dataset.ciudad || '';
+            } else {
+                clienteNombreReporte.value = '';
+                clienteNumeroReporte.value = '';
+                ciudadReporte.value = '';
             }
         };
         ordenReporteSelect?.addEventListener('change', () => completarClienteReporte(ordenReporteSelect));

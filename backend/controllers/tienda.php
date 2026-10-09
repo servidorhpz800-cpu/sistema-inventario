@@ -195,8 +195,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_orden'])) {
     $clienteNumero = trim($_POST['cliente_numero'] ?? '');
     $clienteId = (int)($_POST['cliente_id'] ?? 0);
     $calle = trim($_POST['calle'] ?? '');
+    $ciudad = trim($_POST['ciudad'] ?? '');
     $ipAsignada = trim($_POST['ip_asignada'] ?? '');
-    if ($tecnicoId > 0 && in_array($tipoOrden, $tiposPermitidos, true) && $clienteNombre !== '' && $clienteNumero !== '' && $calle !== '') {
+    if ($tecnicoId > 0 && in_array($tipoOrden, $tiposPermitidos, true) && $clienteNombre !== '' && $clienteNumero !== '' && $calle !== '' && $ciudad !== '') {
         if ($ipAsignada !== '' && filter_var($ipAsignada, FILTER_VALIDATE_IP) === false) {
             $mensaje = 'La IP asignada no tiene un formato válido.';
             $tipoMensaje = 'danger';
@@ -209,12 +210,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_orden'])) {
                     'calle' => $calle,
                     'numero_exterior' => trim($_POST['numero_exterior'] ?? ''),
                     'colonia' => trim($_POST['colonia'] ?? ''),
+                    'ciudad' => $ciudad,
                     'referencias' => trim($_POST['referencias'] ?? ''),
                     'ubicacion_url' => trim($_POST['ubicacion_url'] ?? ''),
                 ];
 
                 if ($clienteId > 0) {
-                    $clienteStmt = $pdo->prepare('UPDATE clientes SET nombre = :nombre, numero = :numero, calle = :calle, numero_exterior = :numero_exterior, colonia = :colonia, referencias = :referencias, ubicacion_url = :ubicacion_url WHERE id = :id');
+                    $clienteStmt = $pdo->prepare('UPDATE clientes SET nombre = :nombre, numero = :numero, calle = :calle, numero_exterior = :numero_exterior, colonia = :colonia, ciudad = :ciudad, referencias = :referencias, ubicacion_url = :ubicacion_url WHERE id = :id');
                     $clienteStmt->execute($datosCliente + ['id' => $clienteId]);
                     if ($clienteStmt->rowCount() === 0) {
                         $verificarCliente = $pdo->prepare('SELECT id FROM clientes WHERE id = :id LIMIT 1');
@@ -228,16 +230,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_orden'])) {
                     $buscarCliente->execute(['numero' => $clienteNumero]);
                     $clienteId = (int)$buscarCliente->fetchColumn();
                     if ($clienteId > 0) {
-                        $clienteStmt = $pdo->prepare('UPDATE clientes SET nombre = :nombre, calle = :calle, numero_exterior = :numero_exterior, colonia = :colonia, referencias = :referencias, ubicacion_url = :ubicacion_url WHERE id = :id');
+                        $clienteStmt = $pdo->prepare('UPDATE clientes SET nombre = :nombre, calle = :calle, numero_exterior = :numero_exterior, colonia = :colonia, ciudad = :ciudad, referencias = :referencias, ubicacion_url = :ubicacion_url WHERE id = :id');
                         $clienteStmt->execute($datosCliente + ['id' => $clienteId]);
                     } else {
-                        $clienteStmt = $pdo->prepare('INSERT INTO clientes (nombre, numero, calle, numero_exterior, colonia, referencias, ubicacion_url) VALUES (:nombre, :numero, :calle, :numero_exterior, :colonia, :referencias, :ubicacion_url)');
+                        $clienteStmt = $pdo->prepare('INSERT INTO clientes (nombre, numero, calle, numero_exterior, colonia, ciudad, referencias, ubicacion_url) VALUES (:nombre, :numero, :calle, :numero_exterior, :colonia, :ciudad, :referencias, :ubicacion_url)');
                         $clienteStmt->execute($datosCliente);
                         $clienteId = (int)$pdo->lastInsertId();
                     }
                 }
 
-                $stmt = $pdo->prepare('INSERT INTO ordenes (equipo_id, tecnico_id, cliente_id, cliente_nombre, cliente_numero, calle, numero_exterior, colonia, referencias, ubicacion_url, ip_asignada, tipo_orden, estado, descripcion) VALUES (:equipo_id, :tecnico_id, :cliente_id, :cliente_nombre, :cliente_numero, :calle, :numero_exterior, :colonia, :referencias, :ubicacion_url, :ip_asignada, :tipo_orden, :estado, :descripcion)');
+                $stmt = $pdo->prepare('INSERT INTO ordenes (equipo_id, tecnico_id, cliente_id, cliente_nombre, cliente_numero, calle, numero_exterior, colonia, ciudad, referencias, ubicacion_url, ip_asignada, tipo_orden, estado, descripcion) VALUES (:equipo_id, :tecnico_id, :cliente_id, :cliente_nombre, :cliente_numero, :calle, :numero_exterior, :colonia, :ciudad, :referencias, :ubicacion_url, :ip_asignada, :tipo_orden, :estado, :descripcion)');
                 $stmt->execute([
                     'equipo_id' => $equipoId,
                     'tecnico_id' => $tecnicoId,
@@ -247,6 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_orden'])) {
                     'calle' => $calle,
                     'numero_exterior' => $datosCliente['numero_exterior'],
                     'colonia' => $datosCliente['colonia'],
+                    'ciudad' => $datosCliente['ciudad'],
                     'referencias' => $datosCliente['referencias'],
                     'ubicacion_url' => $datosCliente['ubicacion_url'],
                     'ip_asignada' => $ipAsignada !== '' ? $ipAsignada : null,
@@ -268,8 +271,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_orden'])) {
             }
         }
     } else {
-        $mensaje = ($clienteNombre === '' || $clienteNumero === '' || $calle === '')
-            ? 'Completa el nombre del cliente, teléfono y calle.'
+        $mensaje = ($clienteNombre === '' || $clienteNumero === '' || $calle === '' || $ciudad === '')
+            ? 'Completa el nombre del cliente, teléfono, calle y pueblo o ciudad.'
             : ($ipAsignada !== '' && filter_var($ipAsignada, FILTER_VALIDATE_IP) === false ? 'La IP asignada no tiene un formato válido.' : 'Debes seleccionar un técnico.');
         $tipoMensaje = 'danger';
     }
@@ -357,11 +360,11 @@ if (in_array($tipoExportacion, ['equipos', 'reportes', 'instalaciones', 'cliente
             }
             break;
         case 'reportes':
-            $encabezadosExportacion = ['ID', 'Fecha', 'Técnico', 'Orden', 'Tipo de orden', 'Estado reporte', 'Cliente', 'Teléfono', 'Equipo', 'Marca', 'Modelo', 'Serial', 'Título', 'Actividad', 'Materiales', 'Resultado', 'Descripción', 'Latitud', 'Longitud', 'Evidencias'];
+            $encabezadosExportacion = ['ID', 'Fecha', 'Técnico', 'Orden', 'Tipo de orden', 'Estado reporte', 'Cliente', 'Teléfono', 'Pueblo o ciudad', 'Equipo', 'Marca', 'Modelo', 'Serial', 'Título', 'Actividad', 'Materiales', 'Resultado', 'Descripción', 'Latitud', 'Longitud', 'Evidencias'];
             foreach ($reportes as $reporte) {
                 $filasExportacion[] = [
                     $reporte['id'], $reporte['created_at'], $reporte['tecnico'], $reporte['orden_id'], $reporte['tipo_orden'],
-                    $reporte['estado'], $reporte['cliente_nombre'], $reporte['cliente_numero'], $reporte['equipo_tipo'],
+                    $reporte['estado'], $reporte['cliente_nombre'], $reporte['cliente_numero'], $reporte['ciudad'], $reporte['equipo_tipo'],
                     $reporte['equipo_marca'], $reporte['equipo_modelo'], $reporte['equipo_serial'], $reporte['titulo'],
                     $reporte['actividad_realizada'], $reporte['materiales'], $reporte['resultado'], $reporte['descripcion'],
                     $reporte['latitud'], $reporte['longitud'], implode(' | ', $reporte['fotos']),
@@ -369,22 +372,22 @@ if (in_array($tipoExportacion, ['equipos', 'reportes', 'instalaciones', 'cliente
             }
             break;
         case 'instalaciones':
-            $encabezadosExportacion = ['ID orden', 'Fecha', 'Estado', 'Técnico', 'Cliente', 'Teléfono', 'Calle', 'Número', 'Colonia', 'Referencias', 'Ubicación', 'IP asignada', 'Equipo', 'Marca', 'Modelo', 'Serial', 'Descripción'];
+            $encabezadosExportacion = ['ID orden', 'Fecha', 'Estado', 'Técnico', 'Cliente', 'Teléfono', 'Calle', 'Número', 'Colonia', 'Pueblo o ciudad', 'Referencias', 'Ubicación', 'IP asignada', 'Equipo', 'Marca', 'Modelo', 'Serial', 'Descripción'];
             foreach ($ordenes as $orden) {
                 if ($orden['tipo_orden'] !== 'instalacion') {
                     continue;
                 }
                 $filasExportacion[] = [
                     $orden['id'], $orden['created_at'], $orden['estado'], $orden['tecnico'], $orden['cliente_nombre'],
-                    $orden['cliente_numero'], $orden['calle'], $orden['numero_exterior'], $orden['colonia'], $orden['referencias'],
+                    $orden['cliente_numero'], $orden['calle'], $orden['numero_exterior'], $orden['colonia'], $orden['ciudad'], $orden['referencias'],
                     $orden['ubicacion_url'], $orden['ip_asignada'], $orden['tipo'], $orden['marca'], $orden['modelo'],
                     $orden['serial'], $orden['descripcion'],
                 ];
             }
             break;
         case 'clientes':
-            $encabezadosExportacion = ['ID', 'Cliente', 'Teléfono', 'Calle', 'Número', 'Colonia', 'Referencias', 'Ubicación', 'IP más reciente', 'Total de órdenes', 'Última visita'];
-            $clientesExportacion = $pdo->query("SELECT c.id, c.nombre, c.numero, c.calle, c.numero_exterior, c.colonia, c.referencias, c.ubicacion_url, (SELECT o_ip.ip_asignada FROM ordenes o_ip WHERE o_ip.cliente_id = c.id AND o_ip.ip_asignada IS NOT NULL AND o_ip.ip_asignada <> '' ORDER BY o_ip.created_at DESC, o_ip.id DESC LIMIT 1) AS ip_asignada, COUNT(o.id) AS total_ordenes, MAX(o.created_at) AS ultima_visita FROM clientes c LEFT JOIN ordenes o ON o.cliente_id = c.id GROUP BY c.id ORDER BY c.updated_at DESC, c.nombre ASC")->fetchAll();
+            $encabezadosExportacion = ['ID', 'Cliente', 'Teléfono', 'Calle', 'Número', 'Colonia', 'Pueblo o ciudad', 'Referencias', 'Ubicación', 'IP más reciente', 'Total de órdenes', 'Última visita'];
+            $clientesExportacion = $pdo->query("SELECT c.id, c.nombre, c.numero, c.calle, c.numero_exterior, c.colonia, c.ciudad, c.referencias, c.ubicacion_url, (SELECT o_ip.ip_asignada FROM ordenes o_ip WHERE o_ip.cliente_id = c.id AND o_ip.ip_asignada IS NOT NULL AND o_ip.ip_asignada <> '' ORDER BY o_ip.created_at DESC, o_ip.id DESC LIMIT 1) AS ip_asignada, COUNT(o.id) AS total_ordenes, MAX(o.created_at) AS ultima_visita FROM clientes c LEFT JOIN ordenes o ON o.cliente_id = c.id GROUP BY c.id ORDER BY c.updated_at DESC, c.nombre ASC")->fetchAll();
             foreach ($clientesExportacion as $cliente) {
                 $filasExportacion[] = array_values($cliente);
             }

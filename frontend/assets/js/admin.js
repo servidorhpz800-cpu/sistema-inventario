@@ -3,7 +3,8 @@ const inventoryAdmin = window.inventoryAdminData;
         const barcodeSearchButtonAdmin = document.getElementById('barcodeSearchButtonAdmin');
         const barcodeCameraButtonAdmin = document.getElementById('barcodeCameraButtonAdmin');
         const barcodeVideoAdmin = document.getElementById('barcodeVideoAdmin');
-        const barcodeResultAdmin = document.getElementById('barcodeResultAdmin');
+        const barcodeResultAdmin = document.getElementById('barcodeResultAdmin')
+            || document.querySelector('#adminEquipmentForm [data-modem-detection-result]');
         const serialButtonsAdmin = document.querySelectorAll('[data-scan-target]');
 
         function escapeHtml(value) {

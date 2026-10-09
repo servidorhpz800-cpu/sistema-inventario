@@ -52,18 +52,19 @@
                 <div class="table-wrap">
                     <table class="table">
                         <thead>
-                            <tr><th>Cliente</th><th>Teléfono</th><th>Domicilio</th><th>IP más reciente</th><th>Referencias</th><th>Órdenes</th><th>Última visita</th></tr>
+                            <tr><th>Cliente</th><th>Teléfono</th><th>Domicilio</th><th>Pueblo o ciudad</th><th>IP más reciente</th><th>Referencias</th><th>Órdenes</th><th>Última visita</th></tr>
                         </thead>
                         <tbody id="tablaClientes">
                             <?php if (empty($clientes)): ?>
-                                <tr><td colspan="7">Los clientes se guardarán aquí al crear su primera orden.</td></tr>
+                                <tr><td colspan="8">Los clientes se guardarán aquí al crear su primera orden.</td></tr>
                             <?php else: ?>
                                 <?php foreach ($clientes as $cliente): ?>
-                                    <?php $busquedaCliente = strtolower(trim($cliente['nombre'] . ' ' . $cliente['numero'] . ' ' . $cliente['calle'] . ' ' . ($cliente['numero_exterior'] ?? '') . ' ' . ($cliente['colonia'] ?? ''))); ?>
+                                    <?php $busquedaCliente = strtolower(trim($cliente['nombre'] . ' ' . $cliente['numero'] . ' ' . $cliente['calle'] . ' ' . ($cliente['numero_exterior'] ?? '') . ' ' . ($cliente['colonia'] ?? '') . ' ' . ($cliente['ciudad'] ?? ''))); ?>
                                     <tr data-client-search="<?php echo htmlspecialchars($busquedaCliente, ENT_QUOTES); ?>">
                                         <td><?php echo htmlspecialchars($cliente['nombre']); ?></td>
                                         <td><a href="tel:<?php echo htmlspecialchars($cliente['numero']); ?>"><?php echo htmlspecialchars($cliente['numero']); ?></a></td>
                                         <td><?php echo htmlspecialchars(trim($cliente['calle'] . ' ' . ($cliente['numero_exterior'] ?: '') . ', ' . ($cliente['colonia'] ?: ''))); ?><?php if (!empty($cliente['ubicacion_url'])): ?><br><a href="<?php echo htmlspecialchars($cliente['ubicacion_url']); ?>" target="_blank" rel="noopener">Abrir mapa</a><?php endif; ?></td>
+                                        <td><?php echo htmlspecialchars($cliente['ciudad'] ?: 'Sin ciudad registrada'); ?></td>
                                         <td><?php echo htmlspecialchars($cliente['ip_asignada'] ?: 'Sin IP registrada'); ?></td>
                                         <td><?php echo htmlspecialchars($cliente['referencias'] ?: '-'); ?></td>
                                         <td><?php echo (int)$cliente['total_ordenes']; ?></td>
@@ -78,10 +79,6 @@
             </section>
             <?php else: ?>
             <div class="stats-grid">
-                <div class="stat-card">
-                    <span class="label">Inventario registrado</span>
-                    <span class="value"><?php echo $stats['total']; ?></span>
-                </div>
                 <button type="button" class="stat-card stat-card-button" id="toggleAvailableEquipment" aria-expanded="false" aria-controls="availableEquipmentPanel">
                     <span class="label">Stock en tienda</span>
                     <span class="value"><?php echo $stats['disponibles']; ?></span>
@@ -160,35 +157,6 @@
                 <p class="form-note">El serial (o SN) es obligatorio. Los seriales ya registrados se omiten; los nuevos se agregan como disponibles en Tienda. Si falta el tipo, se usa “Modem GPON”. Límite: 5 MB y 5,000 equipos por archivo.</p>
             </section>
 
-            <div class="card scanner-panel">
-                <div class="card-heading">
-                    <div>
-                        <span class="eyebrow">Escáner</span>
-                        <h3>Buscar equipo por código de barras</h3>
-                    </div>
-                    <span class="step-number">00</span>
-                </div>
-
-                <div class="scanner-box">
-                    <label>
-                        <span>Código / serial</span>
-                        <input type="text" id="barcodeScannerInput" placeholder="Escanea o escribe el código y presiona Enter">
-                    </label>
-                    <div class="scanner-actions">
-                        <button type="button" id="barcodeSearchButton" class="btn btn-primary">Buscar</button>
-                        <button type="button" id="barcodeCameraButton" class="btn btn-secondary">Escanear cámara</button>
-                    </div>
-                </div>
-
-                <video id="barcodeVideo" class="barcode-video" autoplay playsinline muted></video>
-
-                <div id="barcodeResult" class="barcode-result">
-                    <p>Sin búsqueda aún. La cámara o el texto se pueden usar para buscar el equipo por serial.</p>
-                </div>
-
-                <p class="form-note">Si tu celular no abre la cámara, usa la IP local del equipo, por ejemplo: http://192.168.1.20/compuser y acepta el permiso de cámara del navegador.</p>
-            </div>
-
             <div class="content-grid">
                 <div class="card">
                     <h3>Agregar equipo al stock</h3>
@@ -209,7 +177,15 @@
                             </label>
                             <label>
                                 <span>Marca</span>
-                                <input type="text" name="marca">
+                                <select name="marca" data-modem-brand>
+                                    <option value="">Seleccione marca</option>
+                                    <option value="Huawei">Huawei</option>
+                                    <option value="TP-Link">TP-Link</option>
+                                    <option value="Telmex">Telmex</option>
+                                    <option value="Nokia">Nokia</option>
+                                    <option value="V-SOL">V-SOL</option>
+                                    <option value="Otros">Otros</option>
+                                </select>
                             </label>
                             <label>
                                 <span>Modelo</span>
@@ -296,6 +272,7 @@
                                             data-calle="<?php echo htmlspecialchars($cliente['calle'], ENT_QUOTES); ?>"
                                             data-numero-exterior="<?php echo htmlspecialchars($cliente['numero_exterior'] ?? '', ENT_QUOTES); ?>"
                                             data-colonia="<?php echo htmlspecialchars($cliente['colonia'] ?? '', ENT_QUOTES); ?>"
+                                            data-ciudad="<?php echo htmlspecialchars($cliente['ciudad'] ?? '', ENT_QUOTES); ?>"
                                             data-referencias="<?php echo htmlspecialchars($cliente['referencias'] ?? '', ENT_QUOTES); ?>"
                                             data-ubicacion-url="<?php echo htmlspecialchars($cliente['ubicacion_url'] ?? '', ENT_QUOTES); ?>"
                                             data-ip="<?php echo htmlspecialchars($cliente['ip_asignada'] ?? '', ENT_QUOTES); ?>"><?php echo htmlspecialchars($cliente['nombre'] . ' · ' . $cliente['numero']); ?></option>
@@ -328,6 +305,10 @@
                                 <label>
                                     <span>Colonia</span>
                                     <input type="text" name="colonia" placeholder="Colonia">
+                                </label>
+                                <label>
+                                    <span>Pueblo o ciudad</span>
+                                    <input type="text" name="ciudad" maxlength="120" placeholder="Pueblo o ciudad" required>
                                 </label>
                             </div>
                             <label>
@@ -402,7 +383,7 @@
 
             <div class="card equipment-history stacked-panel">
                 <div class="orders-toolbar">
-                    <h3>Equipos que llevan los técnicos</h3>
+                    <h3>Historial: quién usó cada equipo y dónde</h3>
                     <span class="badge info"><?php echo count($equiposEnCampo); ?> movimientos</span>
                 </div>
                 <div class="order-list">
@@ -419,6 +400,8 @@
                                 <div><span>Serial</span><?php echo htmlspecialchars($movimiento['serial'] ?: 'Sin serial'); ?></div>
                                 <div><span>Orden</span><?php echo $movimiento['orden_numero'] ? '#' . (int)$movimiento['orden_numero'] : 'Sin orden específica'; ?></div>
                                 <div><span>Cliente</span><?php echo htmlspecialchars($movimiento['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($movimiento['cliente_numero'] ?: 'Sin número'); ?></div>
+                                <div><span>Pueblo o ciudad</span><?php echo htmlspecialchars($movimiento['ciudad'] ?: 'Ciudad no registrada'); ?></div>
+                                <div><span>Ubicación</span><?php echo htmlspecialchars(trim(($movimiento['calle'] ?? '') . ' ' . ($movimiento['numero_exterior'] ?? '') . ' ' . ($movimiento['colonia'] ?? '')) ?: 'Domicilio no registrado'); ?></div>
                             </div>
                             <?php if (!empty($movimiento['observaciones'])): ?><p class="order-description"><?php echo htmlspecialchars($movimiento['observaciones']); ?></p><?php endif; ?>
                         </article>
@@ -453,6 +436,7 @@
                             <div class="order-facts">
                                 <div><span>Equipo</span><?php echo $orden['tipo'] ? htmlspecialchars($orden['tipo'] . ' · ' . ($orden['marca'] ?: 'Sin marca')) : 'Se asigna desde despacho'; ?></div>
                                 <div><span>Técnico</span><?php echo htmlspecialchars($orden['tecnico']); ?></div>
+                                <div><span>Pueblo o ciudad</span><?php echo htmlspecialchars($orden['ciudad'] ?: 'Sin ciudad'); ?></div>
                                 <div><span>Cliente</span><?php echo htmlspecialchars($orden['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($orden['cliente_numero'] ?: 'Sin teléfono'); ?></div>
                                 <div><span>Dirección</span><?php echo htmlspecialchars(trim(($orden['calle'] ?: '') . ' ' . ($orden['numero_exterior'] ?: '') . ', ' . ($orden['colonia'] ?: '')) ?: 'Sin domicilio'); ?></div>
                             </div>

@@ -3,7 +3,8 @@ const inventory = window.inventoryData;
         const barcodeSearchButton = document.getElementById('barcodeSearchButton');
         const barcodeCameraButton = document.getElementById('barcodeCameraButton');
         const barcodeVideo = document.getElementById('barcodeVideo');
-        const barcodeResult = document.getElementById('barcodeResult');
+        const barcodeResult = document.getElementById('barcodeResult')
+            || document.querySelector('#stockEquipmentForm [data-modem-detection-result]');
         const dispatchSelect = document.querySelector('select[name="despacho_equipo_id"]');
         const serialButtons = document.querySelectorAll('[data-scan-target]');
         const serialFileTriggers = document.querySelectorAll('[data-scan-file-trigger]');
@@ -522,7 +523,7 @@ const inventory = window.inventoryData;
 
             fields.forEach((field) => {
                 const section = field.closest('[data-order-section]');
-                field.required = !section.hidden && (field.name === 'cliente_nombre' || field.name === 'cliente_numero' || field.name === 'calle');
+                field.required = !section.hidden && (field.name === 'cliente_nombre' || field.name === 'cliente_numero' || field.name === 'calle' || field.name === 'ciudad');
             });
         }
 
@@ -544,6 +545,7 @@ const inventory = window.inventoryData;
                 calle: 'calle',
                 numero_exterior: 'numeroExterior',
                 colonia: 'colonia',
+                ciudad: 'ciudad',
                 referencias: 'referencias',
                 ubicacion_url: 'ubicacionUrl',
             })) {

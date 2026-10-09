@@ -33,6 +33,9 @@
         marcaInput?.addEventListener('input', () => {
             marcaInput.dataset.modemAutofilled = 'false';
         });
+        marcaInput?.addEventListener('change', () => {
+            marcaInput.dataset.modemAutofilled = 'false';
+        });
         tipoSelect?.addEventListener('change', () => {
             tipoSelect.dataset.modemAutofilled = 'false';
         });

@@ -1,0 +1,10 @@
+USE compuser_inventario;
+
+ALTER TABLE clientes
+    ADD COLUMN IF NOT EXISTS ciudad VARCHAR(120) DEFAULT NULL AFTER colonia;
+
+ALTER TABLE ordenes
+    ADD COLUMN IF NOT EXISTS ciudad VARCHAR(120) DEFAULT NULL AFTER colonia;
+
+ALTER TABLE reportes
+    ADD COLUMN IF NOT EXISTS ciudad VARCHAR(120) DEFAULT NULL AFTER cliente_numero;

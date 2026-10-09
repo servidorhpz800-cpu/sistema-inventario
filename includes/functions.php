@@ -80,7 +80,7 @@ function getReportes(PDO $pdo, ?int $tecnicoId = null, bool $archivadas = false)
     $filtroArchivo = $archivadas
         ? "r.created_at < CURRENT_DATE AND (o.id IS NULL OR o.estado <> 'pendiente')"
         : "(r.created_at >= CURRENT_DATE OR o.estado = 'pendiente')";
-    $sql = "SELECT r.*, u.nombre AS tecnico, o.tipo_orden, o.estado AS orden_estado, COALESCE(NULLIF(TRIM(r.cliente_nombre), ''), o.cliente_nombre) AS cliente_nombre_actual, COALESCE(NULLIF(TRIM(r.cliente_numero), ''), o.cliente_numero) AS cliente_numero_actual, o.calle, o.numero_exterior, o.colonia, o.referencias, o.ubicacion_url, o.ip_asignada, e.tipo AS equipo_tipo, e.marca AS equipo_marca, e.modelo AS equipo_modelo, e.serial AS equipo_serial
+    $sql = "SELECT r.*, u.nombre AS tecnico, o.tipo_orden, o.estado AS orden_estado, COALESCE(NULLIF(TRIM(r.cliente_nombre), ''), o.cliente_nombre) AS cliente_nombre_actual, COALESCE(NULLIF(TRIM(r.cliente_numero), ''), o.cliente_numero) AS cliente_numero_actual, COALESCE(NULLIF(TRIM(r.ciudad), ''), o.ciudad) AS ciudad_actual, o.calle, o.numero_exterior, o.colonia, o.referencias, o.ubicacion_url, o.ip_asignada, e.tipo AS equipo_tipo, e.marca AS equipo_marca, e.modelo AS equipo_modelo, e.serial AS equipo_serial
         FROM reportes r
         JOIN usuarios u ON u.id = r.tecnico_id
         LEFT JOIN ordenes o ON o.id = r.orden_id
@@ -112,7 +112,8 @@ function getReportes(PDO $pdo, ?int $tecnicoId = null, bool $archivadas = false)
     foreach ($reportes as &$reporte) {
         $reporte['cliente_nombre'] = $reporte['cliente_nombre_actual'];
         $reporte['cliente_numero'] = $reporte['cliente_numero_actual'];
-        unset($reporte['cliente_nombre_actual'], $reporte['cliente_numero_actual']);
+        $reporte['ciudad'] = $reporte['ciudad_actual'];
+        unset($reporte['cliente_nombre_actual'], $reporte['cliente_numero_actual'], $reporte['ciudad_actual']);
         $reporte['fotos'] = $fotosPorReporte[(int)$reporte['id']] ?? [];
         if (!$reporte['fotos'] && !empty($reporte['foto_url'])) {
             $reporte['fotos'][] = $reporte['foto_url'];
@@ -192,7 +193,15 @@ function getEquiposTecnico(PDO $pdo, ?int $tecnicoId = null): array
 
 function getMovimientosTecnico(PDO $pdo, ?int $tecnicoId = null): array
 {
-    $sql = 'SELECT et.*, e.tipo, e.marca, e.modelo, e.serial, o.tipo_orden, COALESCE(et.cliente_nombre, o.cliente_nombre) AS cliente_nombre_actual, COALESCE(et.cliente_numero, o.cliente_numero) AS cliente_numero_actual, u.nombre AS tecnico FROM equipos_tecnico et JOIN equipos e ON e.id = et.equipo_id LEFT JOIN ordenes o ON o.id = et.orden_id JOIN usuarios u ON u.id = et.tecnico_id';
+    $sql = "SELECT et.*, e.tipo, e.marca, e.modelo, e.serial, o.tipo_orden,
+            COALESCE(NULLIF(TRIM(et.cliente_nombre), ''), o.cliente_nombre) AS cliente_nombre_actual,
+            COALESCE(NULLIF(TRIM(et.cliente_numero), ''), o.cliente_numero) AS cliente_numero_actual,
+            COALESCE(NULLIF(TRIM(o.ciudad), ''), (SELECT r.ciudad FROM reportes r WHERE r.movimiento_id = et.id AND r.ciudad IS NOT NULL AND r.ciudad <> '' ORDER BY r.created_at DESC, r.id DESC LIMIT 1)) AS ciudad,
+            o.calle, o.numero_exterior, o.colonia, o.id AS orden_numero, u.nombre AS tecnico
+        FROM equipos_tecnico et
+        JOIN equipos e ON e.id = et.equipo_id
+        LEFT JOIN ordenes o ON o.id = et.orden_id
+        JOIN usuarios u ON u.id = et.tecnico_id";
     if ($tecnicoId !== null) {
         $sql .= ' WHERE et.tecnico_id = :tecnicoId';
     }

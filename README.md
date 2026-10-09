@@ -64,9 +64,9 @@ CREATE USER 'compuser_app'@'192.168.1.20' IDENTIFIED BY 'cambia-esta-clave';
 GRANT SELECT, INSERT, UPDATE, DELETE ON compuser_inventario.* TO 'compuser_app'@'192.168.1.20';
 ```
 
-Si ya tienes datos, haz primero un respaldo. No vuelvas a importar el esquema sobre una instalación antigua esperando que modifique tablas existentes. Si todavía faltan columnas de domicilio o reportes, aplica primero `database/migracion_domicilio_reportes.sql`; después aplica una sola vez `database/migracion_equipo_reportes.sql` para que Tienda y Admin muestren el módem seleccionado en cada reporte. Aplica también una sola vez `database/migracion_clientes.sql` para crear el directorio de clientes y asociar las órdenes existentes por teléfono. Ejecuta `database/migracion_indices.sql` una sola vez para añadir índices a esa base. En instalaciones existentes, aplica además `database/migracion_movimientos_evidencias.sql` para guardar el cliente por movimiento/reporte y habilitar varias imágenes por reporte. No ejecutes estas migraciones en una base recién creada con `schema.sql` si sus tablas ya incluyen esos cambios.
+Si ya tienes datos, haz primero un respaldo. No vuelvas a importar el esquema sobre una instalación antigua esperando que modifique tablas existentes. Si todavía faltan columnas de domicilio o reportes, aplica primero `database/migracion_domicilio_reportes.sql`; después aplica una sola vez `database/migracion_equipo_reportes.sql` para que Tienda y Admin muestren el módem seleccionado en cada reporte. Aplica también una sola vez `database/migracion_clientes.sql` para crear el directorio de clientes y asociar las órdenes existentes por teléfono. Ejecuta `database/migracion_indices.sql` una sola vez para añadir índices a esa base. En instalaciones existentes, aplica además `database/migracion_movimientos_evidencias.sql` para guardar el cliente por movimiento/reporte y habilitar varias imágenes por reporte. Aplica `database/migracion_ciudad.sql` para agregar la ciudad a clientes, órdenes y reportes. No ejecutes estas migraciones en una base recién creada con `schema.sql` si sus tablas ya incluyen esos cambios.
 
-Las fotos de reportes se guardan como archivos bajo `uploads/reportes`; la base central guarda su ruta. Si ejecutas más de un servidor web, monta esa carpeta en almacenamiento compartido con permisos de escritura para Apache, o migra los archivos a un servicio de almacenamiento compartido. No se guardan imágenes binarias en MySQL para evitar inflar y ralentizar la base.
+Las fotos de reportes se guardan como archivos bajo `uploads/reportes`; la base central guarda su ruta. Si ejecutas más de un servidor web, monta esa carpeta en almacenamiento compartido con permisos de escritura para Apache, o migra los archivos a un servicio de almacenamiento compartido. No se guardan imágenes binarias en MySQL para evitar inflar y ralentizar la base. La aplicación no impone un máximo de tamaño o cantidad de imágenes; esos límites, si los hay, dependen de PHP (`upload_max_filesize`, `post_max_size`, `max_file_uploads`) y del servidor web.
 
 ## Funcionalidades
 
@@ -96,6 +96,7 @@ Las fotos de reportes se guardan como archivos bajo `uploads/reportes`; la base 
 - `database/migracion_domicilio_reportes.sql` - actualización de instalaciones anteriores
 - `database/migracion_equipo_reportes.sql` - enlaza cada reporte con el equipo utilizado
 - `database/migracion_movimientos_evidencias.sql` - agrega cliente por movimiento y evidencias múltiples
+- `database/migracion_ciudad.sql` - agrega pueblo o ciudad a clientes, órdenes y reportes
 - `database/migracion_indices.sql` - índices para bases existentes
 
 ## Importante

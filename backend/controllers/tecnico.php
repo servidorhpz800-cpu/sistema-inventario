@@ -64,6 +64,7 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
     $movimientoId = (int)($_POST['movimiento_reporte_id'] ?? 0);
     $titulo = trim($_POST['titulo'] ?? '');
     $descripcion = trim($_POST['descripcion'] ?? '');
+    $ciudadReporte = trim($_POST['ciudad'] ?? '');
     $estadoEquipo = $_POST['estado_equipo'] ?? 'normal';
     $actividad = trim($_POST['actividad_realizada'] ?? '');
     $materiales = trim($_POST['materiales'] ?? '');
@@ -79,31 +80,27 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
     $subidaFotos = $_FILES['foto_reporte'] ?? null;
     if ($subidaFotos !== null) {
         $cantidadFotos = is_array($subidaFotos['name']) ? count($subidaFotos['name']) : 1;
-        if ($cantidadFotos > 10) {
-            $mensaje = 'Puedes adjuntar hasta 10 imágenes por reporte.';
-            $tipoMensaje = 'danger';
-        } else {
-            $extensiones = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
-            for ($indice = 0; $indice < $cantidadFotos; $indice++) {
-                $errorFoto = is_array($subidaFotos['error']) ? $subidaFotos['error'][$indice] : $subidaFotos['error'];
-                if ($errorFoto === UPLOAD_ERR_NO_FILE) {
-                    continue;
-                }
-                $tmpFoto = is_array($subidaFotos['tmp_name']) ? $subidaFotos['tmp_name'][$indice] : $subidaFotos['tmp_name'];
-                $tamanoFoto = is_array($subidaFotos['size']) ? $subidaFotos['size'][$indice] : $subidaFotos['size'];
-                if ($errorFoto !== UPLOAD_ERR_OK || $tamanoFoto > 8 * 1024 * 1024) {
-                    $mensaje = 'Cada imagen debe pesar menos de 8 MB.';
-                    $tipoMensaje = 'danger';
-                    break;
-                }
-                $mime = (new finfo(FILEINFO_MIME_TYPE))->file($tmpFoto);
-                if (!isset($extensiones[$mime])) {
-                    $mensaje = 'Las evidencias deben ser JPG, PNG o WEBP.';
-                    $tipoMensaje = 'danger';
-                    break;
-                }
-                $fotosTemporales[] = ['tmp_name' => $tmpFoto, 'extension' => $extensiones[$mime]];
+        $extensiones = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+        for ($indice = 0; $indice < $cantidadFotos; $indice++) {
+            $errorFoto = is_array($subidaFotos['error']) ? $subidaFotos['error'][$indice] : $subidaFotos['error'];
+            if ($errorFoto === UPLOAD_ERR_NO_FILE) {
+                continue;
             }
+            if ($errorFoto !== UPLOAD_ERR_OK) {
+                $mensaje = in_array($errorFoto, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)
+                    ? 'La imagen supera el límite de carga configurado en el servidor.'
+                    : 'No se pudo recibir una imagen. Inténtalo de nuevo.';
+                $tipoMensaje = 'danger';
+                break;
+            }
+            $tmpFoto = is_array($subidaFotos['tmp_name']) ? $subidaFotos['tmp_name'][$indice] : $subidaFotos['tmp_name'];
+            $mime = (new finfo(FILEINFO_MIME_TYPE))->file($tmpFoto);
+            if (!isset($extensiones[$mime])) {
+                $mensaje = 'Las evidencias deben ser JPG, PNG o WEBP.';
+                $tipoMensaje = 'danger';
+                break;
+            }
+            $fotosTemporales[] = ['tmp_name' => $tmpFoto, 'extension' => $extensiones[$mime]];
         }
     }
 
@@ -120,12 +117,12 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
         }
     }
 
-    if ($titulo !== '' && $descripcion !== '' && $tipoMensaje === 'success') {
+    if ($titulo !== '' && $tipoMensaje === 'success') {
         try {
             $pdo->beginTransaction();
 
                 if ($ordenId !== null) {
-                    $ordenEquipo = $pdo->prepare('SELECT equipo_id, cliente_nombre, cliente_numero, tipo_orden FROM ordenes WHERE id = :id AND tecnico_id = :tecnico_id LIMIT 1');
+                    $ordenEquipo = $pdo->prepare('SELECT equipo_id, cliente_id, cliente_nombre, cliente_numero, ciudad, tipo_orden FROM ordenes WHERE id = :id AND tecnico_id = :tecnico_id LIMIT 1');
                     $ordenEquipo->execute(['id' => $ordenId, 'tecnico_id' => $tecnicoIdSesion]);
                     $datosOrden = $ordenEquipo->fetch();
                     if (!$datosOrden) {
@@ -139,6 +136,7 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
                         $clienteNombreReporte = trim((string)$datosOrden['cliente_nombre']) ?: $clienteNombreReporte;
                         $clienteNumeroReporte = trim((string)$datosOrden['cliente_numero']) ?: $clienteNumeroReporte;
                     }
+                    $ciudadReporte = $ciudadReporte ?: trim((string)$datosOrden['ciudad']);
                 } else {
                     $equipoDeOrden = null;
                 }
@@ -150,15 +148,25 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
             if ($clienteNombreReporte === '' || $clienteNumeroReporte === '') {
                 throw new RuntimeException('Debes indicar el nombre y número del cliente.');
             }
+            if ($ciudadReporte === '') {
+                throw new RuntimeException('Debes indicar el pueblo o ciudad del servicio.');
+            }
 
             if ($ordenId !== null && $datosOrden['tipo_orden'] === 'instalacion') {
-                $ordenClienteUpdate = $pdo->prepare('UPDATE ordenes SET cliente_nombre = :cliente_nombre, cliente_numero = :cliente_numero WHERE id = :id AND tecnico_id = :tecnico_id');
+                $ordenClienteUpdate = $pdo->prepare('UPDATE ordenes SET cliente_nombre = :cliente_nombre, cliente_numero = :cliente_numero, ciudad = :ciudad WHERE id = :id AND tecnico_id = :tecnico_id');
                 $ordenClienteUpdate->execute([
                     'cliente_nombre' => $clienteNombreReporte,
                     'cliente_numero' => $clienteNumeroReporte,
+                    'ciudad' => $ciudadReporte,
                     'id' => $ordenId,
                     'tecnico_id' => $tecnicoIdSesion,
                 ]);
+                if (!empty($datosOrden['cliente_id'])) {
+                    $pdo->prepare('UPDATE clientes SET ciudad = :ciudad WHERE id = :id')->execute([
+                        'ciudad' => $ciudadReporte,
+                        'id' => (int)$datosOrden['cliente_id'],
+                    ]);
+                }
 
                 $movimientosClienteUpdate = $pdo->prepare('UPDATE equipos_tecnico SET cliente_nombre = :cliente_nombre, cliente_numero = :cliente_numero WHERE orden_id = :orden_id AND tecnico_id = :tecnico_id');
                 $movimientosClienteUpdate->execute([
@@ -186,7 +194,7 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
             }
             $fotoUrl = $fotosGuardadas[0] ?? null;
 
-            $stmt = $pdo->prepare('INSERT INTO reportes (tecnico_id, orden_id, equipo_id, movimiento_id, cliente_nombre, cliente_numero, titulo, actividad_realizada, materiales, resultado, descripcion, latitud, longitud, foto_url, estado) VALUES (:tecnico_id, :orden_id, :equipo_id, :movimiento_id, :cliente_nombre, :cliente_numero, :titulo, :actividad_realizada, :materiales, :resultado, :descripcion, :latitud, :longitud, :foto_url, :estado)');
+            $stmt = $pdo->prepare('INSERT INTO reportes (tecnico_id, orden_id, equipo_id, movimiento_id, cliente_nombre, cliente_numero, ciudad, titulo, actividad_realizada, materiales, resultado, descripcion, latitud, longitud, foto_url, estado) VALUES (:tecnico_id, :orden_id, :equipo_id, :movimiento_id, :cliente_nombre, :cliente_numero, :ciudad, :titulo, :actividad_realizada, :materiales, :resultado, :descripcion, :latitud, :longitud, :foto_url, :estado)');
             $stmt->execute([
                 'tecnico_id' => $tecnicoIdSesion,
                 'orden_id' => $ordenId,
@@ -194,6 +202,7 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
                 'movimiento_id' => $movimientoReporte ? $movimientoId : null,
                 'cliente_nombre' => $clienteNombreReporte,
                 'cliente_numero' => $clienteNumeroReporte,
+                'ciudad' => $ciudadReporte,
                 'titulo' => $titulo,
                 'actividad_realizada' => $actividad,
                 'materiales' => $materiales,
@@ -255,7 +264,7 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
             $tipoMensaje = 'danger';
         }
     } elseif ($tipoMensaje === 'success') {
-        $mensaje = 'Debe completar el título y la descripción del reporte.';
+        $mensaje = 'Debes completar el título del reporte.';
         $tipoMensaje = 'danger';
     }
 }

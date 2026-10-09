@@ -36,10 +36,6 @@
             </nav>
 
             <div class="stats-grid">
-                <div class="stat-card">
-                    <span class="label">Inventario registrado</span>
-                    <span class="value"><?php echo $stats['total']; ?></span>
-                </div>
                 <button type="button" class="stat-card stat-card-button" id="toggleAvailableEquipment" aria-expanded="false" aria-controls="availableEquipmentPanel">
                     <span class="label">Stock en tienda</span>
                     <span class="value"><?php echo $stats['disponibles']; ?></span>
@@ -96,35 +92,6 @@
                 <div class="alert alert-<?php echo htmlspecialchars($tipoMensaje); ?>"><?php echo htmlspecialchars($mensaje); ?></div>
             <?php endif; ?>
 
-            <div class="card scanner-panel">
-                <div class="card-heading">
-                    <div>
-                        <span class="eyebrow">Escáner</span>
-                        <h3>Buscar equipo por serial o código de barras</h3>
-                    </div>
-                    <span class="step-number">00</span>
-                </div>
-
-                <div class="scanner-box">
-                    <label>
-                        <span>Código / serial</span>
-                        <input type="text" id="barcodeScannerInputAdmin" placeholder="Escanea o escribe el código y presiona Enter">
-                    </label>
-                    <div class="scanner-actions">
-                        <button type="button" id="barcodeSearchButtonAdmin" class="btn btn-primary">Buscar</button>
-                        <button type="button" id="barcodeCameraButtonAdmin" class="btn btn-secondary">Escanear cámara</button>
-                    </div>
-                </div>
-
-                <video id="barcodeVideoAdmin" class="barcode-video" autoplay playsinline muted></video>
-
-                <div id="barcodeResultAdmin" class="barcode-result">
-                    <p>Sin búsqueda aún. El sistema buscará automáticamente el equipo por su serial.</p>
-                </div>
-
-                <p class="form-note">Si el teléfono no abre la cámara, abre la página con la IP local del equipo, por ejemplo: http://192.168.1.20/compuser y acepta el permiso de cámara.</p>
-            </div>
-
             <?php if ($pestana === 'inventario'): ?>
             <div class="content-grid">
                 <div class="card">
@@ -151,7 +118,16 @@
 
                             <label>
                                 <span>Marca</span>
-                                <input type="text" name="marca" value="<?php echo htmlspecialchars($equipoEditar['marca'] ?? ''); ?>">
+                                <?php $marcasModem = ['Huawei', 'TP-Link', 'Telmex', 'Nokia', 'V-SOL', 'Otros']; ?>
+                                <select name="marca" data-modem-brand>
+                                    <option value="">Seleccione marca</option>
+                                    <?php if (!empty($equipoEditar['marca']) && !in_array($equipoEditar['marca'], $marcasModem, true)): ?>
+                                        <option value="<?php echo htmlspecialchars($equipoEditar['marca'], ENT_QUOTES); ?>" selected><?php echo htmlspecialchars($equipoEditar['marca']); ?></option>
+                                    <?php endif; ?>
+                                    <?php foreach ($marcasModem as $marcaModem): ?>
+                                        <option value="<?php echo htmlspecialchars($marcaModem, ENT_QUOTES); ?>" <?php echo (($equipoEditar['marca'] ?? '') === $marcaModem) ? 'selected' : ''; ?>><?php echo htmlspecialchars($marcaModem); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
                             </label>
 
                             <label>
@@ -368,7 +344,7 @@
                                     <?php $clienteClaveReporte = trim((string)$reporte['cliente_numero']) !== '' ? trim((string)$reporte['cliente_numero']) : 'nombre:' . strtolower(trim((string)($reporte['cliente_nombre'] ?: 'Sin cliente'))); ?>
                                     <tr data-report-filter-row data-report-entry data-report-client="<?php echo htmlspecialchars($clienteClaveReporte, ENT_QUOTES); ?>" data-report-technician="<?php echo htmlspecialchars(strtolower(trim($reporte['tecnico'])), ENT_QUOTES); ?>">
                                         <td><?php echo htmlspecialchars(date('d/m/Y H:i', strtotime($reporte['created_at']))); ?><br><?php echo htmlspecialchars($reporte['tecnico']); ?><br><span class="badge <?php echo badgeClass($reporte['estado']); ?>"><?php echo htmlspecialchars($reporte['estado']); ?></span></td>
-                                        <td><strong><?php echo htmlspecialchars($reporte['titulo']); ?></strong><br><?php echo htmlspecialchars($reporte['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($reporte['cliente_numero'] ?: 'Sin número'); ?><br><?php echo htmlspecialchars(ucfirst($reporte['tipo_orden'] ?: 'Sin orden')); ?> · Movimiento <?php echo $reporte['movimiento_id'] ? '#' . (int)$reporte['movimiento_id'] : 'sin despacho'; ?><br><?php echo htmlspecialchars(trim(($reporte['calle'] ?: '') . ' ' . ($reporte['numero_exterior'] ?: '') . ', ' . ($reporte['colonia'] ?: '')) ?: 'Sin domicilio'); ?></td>
+                                        <td><strong><?php echo htmlspecialchars($reporte['titulo']); ?></strong><br><?php echo htmlspecialchars($reporte['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($reporte['cliente_numero'] ?: 'Sin número'); ?><br><?php echo htmlspecialchars(ucfirst($reporte['tipo_orden'] ?: 'Sin orden')); ?> · Movimiento <?php echo $reporte['movimiento_id'] ? '#' . (int)$reporte['movimiento_id'] : 'sin despacho'; ?><br><strong>Pueblo o ciudad:</strong> <?php echo htmlspecialchars($reporte['ciudad'] ?: 'Sin ciudad'); ?><br><?php echo htmlspecialchars(trim(($reporte['calle'] ?: '') . ' ' . ($reporte['numero_exterior'] ?: '') . ', ' . ($reporte['colonia'] ?: '')) ?: 'Sin domicilio'); ?></td>
                                         <td><?php echo htmlspecialchars(trim(($reporte['equipo_tipo'] ?: '') . ' ' . ($reporte['equipo_marca'] ?: '') . ' ' . ($reporte['equipo_serial'] ?: '')) ?: 'Sin equipo'); ?></td>
                                         <td><?php echo htmlspecialchars($reporte['actividad_realizada'] ?: 'Sin detalle'); ?><br><small><?php echo htmlspecialchars($reporte['descripcion']); ?></small><?php if (!empty($reporte['materiales'])): ?><br><strong>Materiales:</strong> <?php echo htmlspecialchars($reporte['materiales']); ?><?php endif; ?></td>
                                         <td><?php echo htmlspecialchars($reporte['resultado'] ?: 'Sin resultado'); ?></td>
@@ -391,7 +367,8 @@
                         <thead>
                             <tr>
                                 <th>Fecha / técnico</th>
-                                <th>Orden / cliente</th>
+                                <th>Cliente</th>
+                                <th>Ciudad / ubicación</th>
                                 <th>Equipo</th>
                                 <th>Resultado</th>
                                 <th>Observaciones</th>
@@ -399,12 +376,13 @@
                         </thead>
                         <tbody>
                             <?php if (empty($movimientosTecnico)): ?>
-                                <tr><td colspan="5">Todavía no hay resultados de equipos registrados por técnicos.</td></tr>
+                                <tr><td colspan="6">Todavía no hay equipos despachados o usados registrados.</td></tr>
                             <?php else: ?>
                                 <?php foreach ($movimientosTecnico as $movimiento): ?>
                                     <tr>
                                         <td><?php echo htmlspecialchars(date('d/m/Y H:i', strtotime($movimiento['updated_at']))); ?><br><?php echo htmlspecialchars($movimiento['tecnico']); ?></td>
-                                        <td><?php echo $movimiento['orden_id'] ? 'Orden #' . (int)$movimiento['orden_id'] : 'Sin orden'; ?><br><?php echo htmlspecialchars($movimiento['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($movimiento['cliente_numero'] ?: 'Sin número'); ?></td>
+                                        <td><?php echo htmlspecialchars($movimiento['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($movimiento['cliente_numero'] ?: 'Sin número'); ?><br><?php echo $movimiento['orden_id'] ? 'Orden #' . (int)$movimiento['orden_id'] : 'Sin orden'; ?></td>
+                                        <td><?php echo htmlspecialchars($movimiento['ciudad'] ?: 'Ciudad no registrada'); ?><br><?php echo htmlspecialchars(trim(($movimiento['calle'] ?? '') . ' ' . ($movimiento['numero_exterior'] ?? '') . ' ' . ($movimiento['colonia'] ?? '')) ?: 'Domicilio no registrado'); ?></td>
                                         <td><?php echo htmlspecialchars(trim($movimiento['tipo'] . ' ' . ($movimiento['marca'] ?: '') . ' ' . ($movimiento['modelo'] ?: '') . ' ' . ($movimiento['serial'] ?: ''))); ?></td>
                                         <td><span class="badge <?php echo badgeClass($movimiento['estado']); ?>"><?php echo htmlspecialchars(str_replace('_', ' ', $movimiento['estado'])); ?></span></td>
                                         <td><?php echo htmlspecialchars($movimiento['observaciones'] ?: 'Sin observaciones'); ?></td>
