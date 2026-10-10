@@ -1,7 +1,7 @@
 (() => {
     const fabricantes = [
         { prefix: '48575443', marca: 'Huawei' },
-        { prefix: 'TLPK', marca: 'TP-Link' },
+        { prefix: 'TPLK', marca: 'TP-Link' },
         { prefix: 'HWTC', marca: 'Telmex' },
         { prefix: 'ALCL', marca: 'Nokia' },
         { prefix: 'V23', marca: 'V-SOL' },
