@@ -33,6 +33,7 @@
                 <a class="<?php echo $pestana === 'personal' ? 'active' : ''; ?>" href="admin.php?tab=personal">Técnicos y personal</a>
                 <a class="<?php echo $pestana === 'reportes' ? 'active' : ''; ?>" href="admin.php?tab=reportes">Reportes técnicos</a>
                 <a class="<?php echo $pestana === 'actividad' ? 'active' : ''; ?>" href="admin.php?tab=actividad">Bitácora de cambios</a>
+                <a class="<?php echo $pestana === 'inventario_general' ? 'active' : ''; ?>" href="admin.php?tab=inventario_general">Inventario general</a>
             </nav>
 
             <div class="stats-grid">
@@ -190,8 +191,15 @@
 
             </div>
 
+            <?php elseif ($pestana === 'inventario_general'): ?>
             <div class="card stacked-panel">
-                <h3>Inventario general</h3>
+                <div class="orders-toolbar">
+                    <div>
+                        <span class="eyebrow">Control de existencias</span>
+                        <h3>Inventario general</h3>
+                    </div>
+                    <span class="badge info"><?php echo count($equipos); ?> equipos</span>
+                </div>
                 <div class="table-wrap">
                     <table class="table">
                         <thead>
@@ -207,23 +215,27 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($equipos as $equipo): ?>
-                                <tr>
-                                    <td><?php echo htmlspecialchars($equipo['tipo']); ?></td>
-                                    <td><?php echo htmlspecialchars($equipo['marca'] ?: '-'); ?></td>
-                                    <td><?php echo htmlspecialchars($equipo['modelo'] ?: '-'); ?></td>
-                                    <td><span class="badge <?php echo badgeClass($equipo['condicion']); ?>"><?php echo str_replace('_', ' ', htmlspecialchars($equipo['condicion'])); ?></span></td>
-                                    <td><span class="badge <?php echo badgeClass($equipo['estado']); ?>"><?php echo str_replace('_', ' ', htmlspecialchars($equipo['estado'])); ?></span></td>
-                                    <td><?php echo htmlspecialchars($equipo['ubicacion'] ?: '-'); ?></td>
-                                    <td><?php echo htmlspecialchars($equipo['serial'] ?: '-'); ?></td>
-                                    <td>
-                                        <div class="inline-actions">
-                                            <a href="admin.php?edit=<?php echo (int)$equipo['id']; ?>" class="btn btn-secondary">Editar</a>
-                                            <a href="admin.php?delete=<?php echo (int)$equipo['id']; ?>" class="btn btn-danger" onclick="return confirm('¿Deseas eliminar este equipo?');">Eliminar</a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
+                            <?php if (empty($equipos)): ?>
+                                <tr><td colspan="8">No hay equipos registrados en el inventario.</td></tr>
+                            <?php else: ?>
+                                <?php foreach ($equipos as $equipo): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($equipo['tipo']); ?></td>
+                                        <td><?php echo htmlspecialchars($equipo['marca'] ?: '-'); ?></td>
+                                        <td><?php echo htmlspecialchars($equipo['modelo'] ?: '-'); ?></td>
+                                        <td><span class="badge <?php echo badgeClass($equipo['condicion']); ?>"><?php echo str_replace('_', ' ', htmlspecialchars($equipo['condicion'])); ?></span></td>
+                                        <td><span class="badge <?php echo badgeClass($equipo['estado']); ?>"><?php echo str_replace('_', ' ', htmlspecialchars($equipo['estado'])); ?></span></td>
+                                        <td><?php echo htmlspecialchars($equipo['ubicacion'] ?: '-'); ?></td>
+                                        <td><?php echo htmlspecialchars($equipo['serial'] ?: '-'); ?></td>
+                                        <td>
+                                            <div class="inline-actions">
+                                                <a href="admin.php?edit=<?php echo (int)$equipo['id']; ?>" class="btn btn-secondary">Editar</a>
+                                                <a href="admin.php?delete=<?php echo (int)$equipo['id']; ?>" class="btn btn-danger" onclick="return confirm('¿Deseas eliminar este equipo?');">Eliminar</a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>

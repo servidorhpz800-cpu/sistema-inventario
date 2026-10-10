@@ -87,7 +87,7 @@ $stats = [
 ];
 $actividad = getActividad($pdo);
 $pestana = $_GET['tab'] ?? 'inventario';
-if (!in_array($pestana, ['inventario', 'personal', 'reportes', 'actividad'], true)) {
+if (!in_array($pestana, ['inventario', 'personal', 'reportes', 'actividad', 'inventario_general'], true)) {
     $pestana = 'inventario';
 }
 $resumenReportesClientes = $pestana === 'reportes' ? getResumenReportesClientes($pdo) : [];
