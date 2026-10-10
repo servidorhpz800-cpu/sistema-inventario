@@ -325,6 +325,8 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['actualiz
     $mensaje = 'Estado de la orden actualizado.';
 }
 
+manejarPostRedirectGet($mensaje, $tipoMensaje);
+
 $filtroTecnico = $esAdmin ? null : $tecnicoIdSesion;
 $ordenes = getOrdenes($pdo, $filtroTecnico);
 $reportes = getReportes($pdo, $filtroTecnico);

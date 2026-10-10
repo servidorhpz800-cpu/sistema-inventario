@@ -383,6 +383,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['despachar_equipo'])) 
     }
 }
 
+manejarPostRedirectGet($mensaje, $tipoMensaje);
+
 $equipos = getInventario($pdo);
 $equiposDisponibles = array_filter($equipos, fn($equipo) => $equipo['estado'] === 'disponible');
 $tecnicos = getUsuarios($pdo, 'tecnico');

@@ -63,6 +63,8 @@ if (isset($_GET['delete'])) {
     $mensaje = 'Equipo eliminado correctamente.';
 }
 
+manejarPostRedirectGet($mensaje, $tipoMensaje);
+
 $editId = isset($_GET['edit']) ? (int)$_GET['edit'] : 0;
 $equipoEditar = null;
 if ($editId > 0) {

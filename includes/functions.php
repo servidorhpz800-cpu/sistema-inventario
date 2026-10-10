@@ -13,6 +13,28 @@ function requireLogin(array $roles): void
     }
 }
 
+function manejarPostRedirectGet(?string &$mensaje, string &$tipoMensaje): void
+{
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && $mensaje !== null && $tipoMensaje === 'success') {
+        $_SESSION['flash_message'] = ['mensaje' => $mensaje, 'tipo' => $tipoMensaje];
+        $ruta = $_SERVER['SCRIPT_NAME'] ?? '/';
+        $query = http_build_query($_GET);
+        header('Location: ' . $ruta . ($query !== '' ? '?' . $query : ''), true, 303);
+        exit;
+    }
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'GET' || !isset($_SESSION['flash_message'])) {
+        return;
+    }
+
+    $flash = $_SESSION['flash_message'];
+    unset($_SESSION['flash_message']);
+    if ($mensaje === null && is_array($flash) && isset($flash['mensaje'], $flash['tipo'])) {
+        $mensaje = (string)$flash['mensaje'];
+        $tipoMensaje = (string)$flash['tipo'];
+    }
+}
+
 function registrarActividad(PDO $pdo, string $modulo, string $accion, string $entidad, ?int $entidadId = null, ?string $detalle = null): void
 {
     if (!isset($_SESSION['usuario_id'], $_SESSION['nombre'], $_SESSION['rol'])) {
