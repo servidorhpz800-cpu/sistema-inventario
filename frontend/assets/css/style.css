@@ -840,6 +840,55 @@ textarea {
     margin-top: 10px;
 }
 
+.report-photo-upload {
+    display: grid;
+    justify-items: start;
+    gap: 10px;
+}
+
+.report-photo-upload > .section-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.report-photo-list {
+    display: grid;
+    width: 100%;
+    gap: 8px;
+}
+
+.report-photo-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #f8fbff;
+}
+
+.report-photo-item img {
+    width: 56px;
+    height: 56px;
+    flex: 0 0 56px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.report-photo-item span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: var(--text);
+    font-size: 0.9rem;
+}
+
+.report-photo-remove {
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+
 @media (max-width: 900px) {
     .topbar {
         justify-content: center;

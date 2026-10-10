@@ -153,10 +153,11 @@
                             <span>Materiales utilizados</span>
                             <textarea name="materiales" placeholder="Modem, conectores, cable, caja NAP, etc."></textarea>
                         </label>
-                        <label>
-                            <span>Imágenes de lo realizado</span>
-                            <input type="file" name="foto_reporte[]" accept="image/jpeg,image/png,image/webp" capture="environment" multiple>
-                        </label>
+                        <div class="report-photo-upload">
+                            <div class="section-label">Imágenes de lo realizado</div>
+                            <button type="button" id="agregarFotoReporte" class="btn btn-secondary">Subir imagen</button>
+                            <div id="fotosReportePreview" class="report-photo-list" aria-live="polite"></div>
+                        </div>
                         <p class="form-note">Los límites de tamaño y cantidad de imágenes dependen de la configuración del servidor.</p>
                         <input type="hidden" name="latitud" id="latitudReporte">
                         <input type="hidden" name="longitud" id="longitudReporte">
