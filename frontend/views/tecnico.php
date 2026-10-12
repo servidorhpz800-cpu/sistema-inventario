@@ -241,15 +241,7 @@
                 <div class="order-list">
                     <?php foreach ($movimientosTecnico as $movimiento): ?>
                         <article class="order-item">
-                            <div class="order-item-head">
-                                <div>
-                                    <span class="eyebrow">Orden #<?php echo (int)$movimiento['orden_id']; ?></span>
-                                    <h4><?php echo htmlspecialchars($movimiento['tipo']); ?><?php echo $movimiento['marca'] ? ' · ' . htmlspecialchars($movimiento['marca']) : ''; ?></h4>
-                                </div>
-                                <span class="badge <?php echo badgeClass($movimiento['estado']); ?>"><?php echo htmlspecialchars(str_replace('_', ' ', $movimiento['estado'])); ?></span>
-                            </div>
-                            <p class="order-description"><strong>Cliente:</strong> <?php echo htmlspecialchars($movimiento['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($movimiento['cliente_numero'] ?: 'Sin número'); ?></p>
-                            <p class="order-description"><?php echo htmlspecialchars($movimiento['observaciones'] ?: 'Sin observaciones'); ?></p>
+                            <h4><?php echo htmlspecialchars($movimiento['tipo']); ?> · Serie: <?php echo htmlspecialchars($movimiento['serial'] ?: 'Sin serie'); ?> · Marca: <?php echo htmlspecialchars($movimiento['marca'] ?: 'Sin marca'); ?></h4>
                         </article>
                     <?php endforeach; ?>
                 </div>
