@@ -279,6 +279,7 @@ function getMovimientosTecnico(PDO $pdo, ?int $tecnicoId = null): array
         JOIN equipos e ON e.id = et.equipo_id
         LEFT JOIN ordenes o ON o.id = et.orden_id
         JOIN usuarios u ON u.id = et.tecnico_id";
+    $tecnicosEquipo = [];
     if ($tecnicoId !== null) {
         $tecnicosEquipo = getTecnicosMismoVehiculo($pdo, $tecnicoId);
         $sql .= ' WHERE et.tecnico_id IN (' . implode(', ', array_fill(0, count($tecnicosEquipo), '?')) . ')';

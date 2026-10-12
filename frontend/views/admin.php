@@ -1,4 +1,21 @@
 
+<?php
+/** @var string $pestana */
+/** @var array $stats */
+/** @var string $adminCsrfToken */
+/** @var array $equipos */
+/** @var array $equiposDisponibles */
+/** @var ?array $equipoEditar */
+/** @var array $usuarios */
+/** @var array $reportes */
+/** @var array $ordenes */
+/** @var array $clientes */
+/** @var array $resumenReportesClientes */
+/** @var array $movimientosTecnico */
+/** @var array $actividad */
+/** @var ?string $mensaje */
+/** @var string $tipoMensaje */
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -32,6 +49,8 @@
                 <a class="<?php echo $pestana === 'inventario' ? 'active' : ''; ?>" href="admin.php?tab=inventario">Inventario</a>
                 <a class="<?php echo $pestana === 'personal' ? 'active' : ''; ?>" href="admin.php?tab=personal">Técnicos y personal</a>
                 <a class="<?php echo $pestana === 'reportes' ? 'active' : ''; ?>" href="admin.php?tab=reportes">Reportes técnicos</a>
+                <a class="<?php echo $pestana === 'ordenes' ? 'active' : ''; ?>" href="admin.php?tab=ordenes">Órdenes</a>
+                <a class="<?php echo $pestana === 'clientes' ? 'active' : ''; ?>" href="admin.php?tab=clientes">Clientes</a>
                 <a class="<?php echo $pestana === 'actividad' ? 'active' : ''; ?>" href="admin.php?tab=actividad">Bitácora de cambios</a>
                 <a class="<?php echo $pestana === 'inventario_general' ? 'active' : ''; ?>" href="admin.php?tab=inventario_general">Inventario general</a>
             </nav>
@@ -230,7 +249,12 @@
                                         <td>
                                             <div class="inline-actions">
                                                 <a href="admin.php?edit=<?php echo (int)$equipo['id']; ?>" class="btn btn-secondary">Editar</a>
-                                                <a href="admin.php?delete=<?php echo (int)$equipo['id']; ?>" class="btn btn-danger" onclick="return confirm('¿Deseas eliminar este equipo?');">Eliminar</a>
+                                                <form method="POST" onsubmit="return confirm('¿Eliminar este equipo? También se eliminarán sus movimientos y las órdenes vinculadas al equipo.');">
+                                                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($adminCsrfToken, ENT_QUOTES, 'UTF-8'); ?>">
+                                                    <input type="hidden" name="admin_delete_action" value="equipment">
+                                                    <input type="hidden" name="record_id" value="<?php echo (int)$equipo['id']; ?>">
+                                                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                                                </form>
                                             </div>
                                         </td>
                                     </tr>
@@ -346,21 +370,30 @@
                                 <th>Trabajo realizado</th>
                                 <th>Resultado</th>
                                 <th>Evidencia</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if (empty($reportes)): ?>
-                                <tr><td colspan="6">Todavía no hay reportes técnicos.</td></tr>
+                                <tr><td colspan="7">Todavía no hay reportes técnicos.</td></tr>
                             <?php else: ?>
                                 <?php foreach ($reportes as $reporte): ?>
                                     <?php $clienteClaveReporte = trim((string)$reporte['cliente_numero']) !== '' ? trim((string)$reporte['cliente_numero']) : 'nombre:' . strtolower(trim((string)($reporte['cliente_nombre'] ?: 'Sin cliente'))); ?>
                                     <tr data-report-filter-row data-report-entry data-report-client="<?php echo htmlspecialchars($clienteClaveReporte, ENT_QUOTES); ?>" data-report-technician="<?php echo htmlspecialchars(strtolower(trim($reporte['tecnico'])), ENT_QUOTES); ?>">
-                                        <td><?php echo htmlspecialchars(date('d/m/Y H:i', strtotime($reporte['created_at']))); ?><br><?php echo htmlspecialchars($reporte['tecnico']); ?><br><span class="badge <?php echo badgeClass($reporte['estado']); ?>"><?php echo htmlspecialchars($reporte['estado']); ?></span></td>
+                                        <td>Reporte #<?php echo (int)$reporte['id']; ?><br><?php echo htmlspecialchars(date('d/m/Y H:i', strtotime($reporte['created_at']))); ?><br><?php echo htmlspecialchars($reporte['tecnico']); ?><br><span class="badge <?php echo badgeClass($reporte['estado']); ?>"><?php echo htmlspecialchars($reporte['estado']); ?></span></td>
                                         <td><strong>Domicilio o calles:</strong> <?php echo htmlspecialchars($reporte['domicilio_calles']); ?><br><?php echo htmlspecialchars($reporte['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($reporte['cliente_numero'] ?: 'Sin número'); ?><br><?php echo htmlspecialchars(str_replace('_', ' ', ucfirst($reporte['tipo_orden'] ?: 'Sin orden'))); ?> · Movimiento <?php echo $reporte['movimiento_id'] ? '#' . (int)$reporte['movimiento_id'] : 'sin despacho'; ?><br><strong>Pueblo o ciudad:</strong> <?php echo htmlspecialchars($reporte['ciudad'] ?: 'Sin ciudad'); ?><br><strong>Dirección registrada:</strong> <?php echo htmlspecialchars(trim(($reporte['calle'] ?: '') . ' ' . ($reporte['numero_exterior'] ?: '') . ', ' . ($reporte['colonia'] ?: '')) ?: 'Sin domicilio'); ?></td>
                                         <td><?php echo htmlspecialchars(trim(($reporte['equipo_tipo'] ?: '') . ' ' . ($reporte['equipo_marca'] ?: '') . ' ' . ($reporte['equipo_serial'] ?: '')) ?: 'Sin equipo'); ?></td>
                                         <td><?php echo htmlspecialchars($reporte['actividad_realizada'] ?: 'Sin detalle'); ?><br><small><?php echo htmlspecialchars($reporte['descripcion']); ?></small><?php if (!empty($reporte['materiales'])): ?><br><strong>Materiales:</strong> <?php echo htmlspecialchars($reporte['materiales']); ?><?php endif; ?></td>
                                         <td><?php echo htmlspecialchars($reporte['resultado'] ?: 'Sin resultado'); ?><br><strong>Total:</strong> <?php echo $reporte['total'] !== null ? htmlspecialchars(number_format((float)$reporte['total'], 2)) : 'Sin dato'; ?><br><strong>Saldo:</strong> <?php echo $reporte['saldo'] !== null ? htmlspecialchars(number_format((float)$reporte['saldo'], 2)) : 'Sin dato'; ?><br><strong>Servicio:</strong> <?php echo htmlspecialchars($reporte['nombre_servicio'] ?: 'Sin dato'); ?><br><strong>Plan:</strong> <?php echo htmlspecialchars($reporte['plan_cliente'] ?: 'Sin dato'); ?><br><strong>Dirección IP:</strong> <?php echo htmlspecialchars($reporte['ip_cliente'] ?: 'Sin dato'); ?></td>
                                         <td>                                        <?php foreach ($reporte['fotos'] as $indiceFoto => $foto): ?><?php $urlFoto = urlEvidenciaReporte((string)$foto); ?><?php if ($urlFoto !== ''): ?><a href="<?php echo htmlspecialchars($urlFoto, ENT_QUOTES); ?>" target="_blank" rel="noopener">Ver imagen <?php echo (int)($indiceFoto + 1); ?></a><br><?php endif; ?><?php endforeach; ?><?php if ($reporte['latitud'] !== null && $reporte['longitud'] !== null): ?><a href="https://www.google.com/maps?q=<?php echo urlencode($reporte['latitud'] . ',' . $reporte['longitud']); ?>" target="_blank" rel="noopener">Ver ubicación</a><?php endif; ?></td>
+                                        <td>
+                                            <form method="POST" onsubmit="return confirm('¿Eliminar definitivamente el reporte #<?php echo (int)$reporte['id']; ?> y sus evidencias adjuntas?');">
+                                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($adminCsrfToken, ENT_QUOTES, 'UTF-8'); ?>">
+                                                <input type="hidden" name="admin_delete_action" value="report">
+                                                <input type="hidden" name="record_id" value="<?php echo (int)$reporte['id']; ?>">
+                                                <button type="submit" class="btn btn-danger">Eliminar</button>
+                                            </form>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>
@@ -398,6 +431,85 @@
                                         <td><?php echo htmlspecialchars(trim($movimiento['tipo'] . ' ' . ($movimiento['marca'] ?: '') . ' ' . ($movimiento['modelo'] ?: '') . ' ' . ($movimiento['serial'] ?: ''))); ?></td>
                                         <td><span class="badge <?php echo badgeClass($movimiento['estado']); ?>"><?php echo htmlspecialchars(str_replace('_', ' ', $movimiento['estado'])); ?></span></td>
                                         <td><?php echo htmlspecialchars($movimiento['observaciones'] ?: 'Sin observaciones'); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <?php elseif ($pestana === 'ordenes'): ?>
+            <div class="card stacked-panel">
+                <div class="orders-toolbar">
+                    <div>
+                        <span class="eyebrow">Administración de órdenes</span>
+                        <h3>Órdenes registradas</h3>
+                    </div>
+                    <span class="badge info"><?php echo count($ordenes); ?> órdenes</span>
+                </div>
+                <div class="table-wrap">
+                    <table class="table">
+                        <thead>
+                            <tr><th>Orden</th><th>Fecha</th><th>Técnico</th><th>Cliente</th><th>Tipo / estado</th><th>Acciones</th></tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($ordenes)): ?>
+                                <tr><td colspan="6">No hay órdenes registradas.</td></tr>
+                            <?php else: ?>
+                                <?php foreach ($ordenes as $orden): ?>
+                                    <tr>
+                                        <td>#<?php echo (int)$orden['id']; ?></td>
+                                        <td><?php echo htmlspecialchars(date('d/m/Y H:i', strtotime($orden['created_at']))); ?></td>
+                                        <td><?php echo htmlspecialchars($orden['tecnico']); ?></td>
+                                        <td><?php echo htmlspecialchars($orden['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($orden['cliente_numero'] ?: 'Sin número'); ?></td>
+                                        <td><?php echo htmlspecialchars(str_replace('_', ' ', $orden['tipo_orden'])); ?><br><span class="badge <?php echo badgeClass($orden['estado']); ?>"><?php echo htmlspecialchars($orden['estado']); ?></span></td>
+                                        <td>
+                                            <form method="POST" onsubmit="return confirm('¿Eliminar definitivamente la orden #<?php echo (int)$orden['id']; ?>? Los reportes y movimientos relacionados conservarán sus datos, pero dejarán de estar vinculados a esta orden.');">
+                                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($adminCsrfToken, ENT_QUOTES, 'UTF-8'); ?>">
+                                                <input type="hidden" name="admin_delete_action" value="order">
+                                                <input type="hidden" name="record_id" value="<?php echo (int)$orden['id']; ?>">
+                                                <button type="submit" class="btn btn-danger">Eliminar</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <?php elseif ($pestana === 'clientes'): ?>
+            <div class="card stacked-panel">
+                <div class="orders-toolbar">
+                    <div>
+                        <span class="eyebrow">Administración de clientes</span>
+                        <h3>Clientes registrados</h3>
+                    </div>
+                    <span class="badge info"><?php echo count($clientes); ?> clientes</span>
+                </div>
+                <div class="table-wrap">
+                    <table class="table">
+                        <thead>
+                            <tr><th>Cliente</th><th>Teléfono</th><th>Dirección</th><th>Ciudad</th><th>Acciones</th></tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($clientes)): ?>
+                                <tr><td colspan="5">No hay clientes registrados.</td></tr>
+                            <?php else: ?>
+                                <?php foreach ($clientes as $cliente): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($cliente['nombre']); ?></td>
+                                        <td><?php echo htmlspecialchars($cliente['numero']); ?></td>
+                                        <td><?php echo htmlspecialchars(trim(($cliente['calle'] ?? '') . ' ' . ($cliente['numero_exterior'] ?? '') . ', ' . ($cliente['colonia'] ?? ''))); ?></td>
+                                        <td><?php echo htmlspecialchars($cliente['ciudad'] ?: 'Sin ciudad'); ?></td>
+                                        <td>
+                                            <form method="POST" onsubmit="return confirm('¿Eliminar definitivamente este cliente? Las órdenes conservarán los datos del cliente, pero perderán el vínculo con su ficha.');">
+                                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($adminCsrfToken, ENT_QUOTES, 'UTF-8'); ?>">
+                                                <input type="hidden" name="admin_delete_action" value="client">
+                                                <input type="hidden" name="record_id" value="<?php echo (int)$cliente['id']; ?>">
+                                                <button type="submit" class="btn btn-danger">Eliminar</button>
+                                            </form>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>

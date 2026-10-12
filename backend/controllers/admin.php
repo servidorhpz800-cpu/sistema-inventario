@@ -7,6 +7,131 @@ requireLogin(['admin']);
 
 $mensaje = null;
 $tipoMensaje = 'success';
+$adminCsrfToken = $_SESSION['admin_csrf_token'] ??= bin2hex(random_bytes(32));
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_delete_action'])) {
+    $accionEliminar = (string)$_POST['admin_delete_action'];
+    $idEliminar = (int)($_POST['record_id'] ?? 0);
+    $tokenRecibido = (string)($_POST['csrf_token'] ?? '');
+
+    if (!hash_equals($adminCsrfToken, $tokenRecibido)) {
+        $mensaje = 'La solicitud de eliminación no es válida. Recarga la página e inténtalo de nuevo.';
+        $tipoMensaje = 'danger';
+    } elseif ($idEliminar <= 0) {
+        $mensaje = 'El registro seleccionado no es válido.';
+        $tipoMensaje = 'danger';
+    } else {
+        $tabDespuesEliminar = 'inventario';
+        $entidadesEliminar = [
+            'report' => ['reportes', 'reporte', 'reporte técnico'],
+            'order' => ['ordenes', 'orden', 'orden'],
+            'equipment' => ['equipos', 'equipo', 'equipo'],
+            'client' => ['clientes', 'cliente', 'cliente'],
+        ];
+
+        if (!isset($entidadesEliminar[$accionEliminar])) {
+            $mensaje = 'El tipo de registro solicitado no se puede eliminar.';
+            $tipoMensaje = 'danger';
+        } else {
+            [$tablaEliminar, $entidadEliminar, $nombreEliminar] = $entidadesEliminar[$accionEliminar];
+            $tabsPorEntidad = ['report' => 'reportes', 'order' => 'ordenes', 'equipment' => 'inventario_general', 'client' => 'clientes'];
+            $tabDespuesEliminar = $tabsPorEntidad[$accionEliminar];
+            $rutasEvidenciaEliminar = [];
+            $eliminacionConfirmada = false;
+
+            try {
+                $directoriosEvidencia = [];
+                if ($accionEliminar === 'report') {
+                    $directoriosEvidencia = array_unique([
+                        getReportesUploadDirectory(),
+                        dirname(__DIR__, 2) . '/uploads/reportes',
+                    ]);
+                }
+                $pdo->beginTransaction();
+
+                if ($accionEliminar === 'report') {
+                    $reporteStmt = $pdo->prepare('SELECT foto_url FROM reportes WHERE id = :id LIMIT 1');
+                    $reporteStmt->execute(['id' => $idEliminar]);
+                    $fotoPrincipal = $reporteStmt->fetchColumn();
+                    if ($fotoPrincipal === false) {
+                        throw new DomainException('No se encontró el reporte seleccionado.');
+                    }
+                    if (is_string($fotoPrincipal) && $fotoPrincipal !== '') {
+                        $rutasEvidenciaEliminar[] = $fotoPrincipal;
+                    }
+                    $evidenciasStmt = $pdo->prepare('SELECT foto_url FROM reporte_evidencias WHERE reporte_id = :id');
+                    $evidenciasStmt->execute(['id' => $idEliminar]);
+                    $rutasEvidenciaEliminar = array_merge($rutasEvidenciaEliminar, $evidenciasStmt->fetchAll(PDO::FETCH_COLUMN));
+                }
+
+                $eliminarStmt = $pdo->prepare("DELETE FROM {$tablaEliminar} WHERE id = :id");
+                $eliminarStmt->execute(['id' => $idEliminar]);
+                if ($eliminarStmt->rowCount() !== 1) {
+                    throw new DomainException("No se encontró el {$nombreEliminar} seleccionado.");
+                }
+
+                registrarActividad($pdo, 'Admin', 'Eliminar registro', $entidadEliminar, $idEliminar, ucfirst($nombreEliminar) . " eliminado desde administración (ID {$idEliminar}).");
+                $pdo->commit();
+                $eliminacionConfirmada = true;
+
+                if ($accionEliminar === 'report') {
+                    $rutasEvidenciaEliminar = array_unique(array_filter($rutasEvidenciaEliminar, static function ($ruta): bool {
+                        return is_string($ruta)
+                            && preg_match('/\A[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}\.(?:jpe?g|png|webp)\z/i', basename(str_replace('\\', '/', $ruta))) === 1
+                            && preg_match('/^https?:\/\//i', $ruta) !== 1;
+                    }));
+                    $noSePudieronBorrarEvidencias = false;
+
+                    foreach ($rutasEvidenciaEliminar as $rutaEvidencia) {
+                        $nombreArchivoEvidencia = basename(str_replace('\\', '/', $rutaEvidencia));
+                        $referenciaEvidencia = $pdo->prepare('SELECT 1 FROM reportes WHERE foto_url = ? UNION ALL SELECT 1 FROM reporte_evidencias WHERE foto_url = ? LIMIT 1');
+                        $referenciaEvidencia->execute([$rutaEvidencia, $rutaEvidencia]);
+                        if ($referenciaEvidencia->fetchColumn()) {
+                            continue;
+                        }
+
+                        foreach ($directoriosEvidencia as $directorioEvidencia) {
+                            $archivoEvidencia = $directorioEvidencia . DIRECTORY_SEPARATOR . $nombreArchivoEvidencia;
+                            if (is_file($archivoEvidencia) && !unlink($archivoEvidencia)) {
+                                $noSePudieronBorrarEvidencias = true;
+                                error_log('No se pudo borrar el archivo de evidencia: ' . $archivoEvidencia);
+                            }
+                        }
+                    }
+
+                    $mensaje = $noSePudieronBorrarEvidencias
+                        ? 'El reporte se eliminó, pero no se pudo borrar uno o más archivos de evidencia. Revisa el registro de errores del servidor.'
+                        : 'El reporte y sus evidencias se eliminaron correctamente.';
+                } else {
+                    $mensaje = ucfirst($nombreEliminar) . ' eliminado correctamente.';
+                }
+            } catch (Throwable $error) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                if ($eliminacionConfirmada) {
+                    $mensaje = $accionEliminar === 'report'
+                        ? 'El reporte se eliminó, pero no se pudieron limpiar correctamente sus archivos de evidencia. Revisa el registro de errores del servidor.'
+                        : ucfirst($nombreEliminar) . ' eliminado correctamente.';
+                } else {
+                    $mensaje = $error instanceof DomainException
+                        ? $error->getMessage()
+                        : "No se pudo eliminar el {$nombreEliminar}. No se guardaron cambios.";
+                }
+                if (!($error instanceof DomainException)) {
+                    error_log('No se pudo eliminar registro desde administración: ' . $error->getMessage());
+                }
+                $tipoMensaje = $eliminacionConfirmada && $accionEliminar !== 'report' ? 'success' : 'danger';
+            }
+        }
+
+        if ($tipoMensaje === 'success' || $eliminacionConfirmada) {
+            $_SESSION['flash_message'] = ['mensaje' => $mensaje, 'tipo' => $tipoMensaje];
+            header('Location: admin.php?tab=' . rawurlencode($tabDespuesEliminar), true, 303);
+            exit;
+        }
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_equipo'])) {
     $tipo = trim($_POST['tipo'] ?? '');
@@ -56,13 +181,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['actualizar_equipo']))
     $mensaje = 'Equipo actualizado correctamente.';
 }
 
-if (isset($_GET['delete'])) {
-    $id = (int)$_GET['delete'];
-    $pdo->prepare('DELETE FROM equipos WHERE id = :id')->execute(['id' => $id]);
-    registrarActividad($pdo, 'Admin', 'Eliminar equipo', 'equipo', $id, 'Equipo eliminado del inventario.');
-    $mensaje = 'Equipo eliminado correctamente.';
-}
-
 manejarPostRedirectGet($mensaje, $tipoMensaje);
 
 $editId = isset($_GET['edit']) ? (int)$_GET['edit'] : 0;
@@ -77,6 +195,8 @@ $equipos = getInventario($pdo);
 $equiposDisponibles = array_filter($equipos, fn($equipo) => $equipo['estado'] === 'disponible');
 $usuarios = getUsuarios($pdo);
 $reportes = getReportes($pdo);
+$ordenes = $pdo->query('SELECT o.*, u.nombre AS tecnico FROM ordenes o JOIN usuarios u ON u.id = o.tecnico_id ORDER BY o.created_at DESC')->fetchAll();
+$clientes = $pdo->query('SELECT * FROM clientes ORDER BY nombre ASC')->fetchAll();
 $movimientosTecnico = getMovimientosTecnico($pdo);
 $stats = [
     'total' => count($equipos),
@@ -87,7 +207,7 @@ $stats = [
 ];
 $actividad = getActividad($pdo);
 $pestana = $_GET['tab'] ?? 'inventario';
-if (!in_array($pestana, ['inventario', 'personal', 'reportes', 'actividad', 'inventario_general'], true)) {
+if (!in_array($pestana, ['inventario', 'personal', 'reportes', 'actividad', 'inventario_general', 'ordenes', 'clientes'], true)) {
     $pestana = 'inventario';
 }
 $resumenReportesClientes = $pestana === 'reportes' ? getResumenReportesClientes($pdo) : [];
