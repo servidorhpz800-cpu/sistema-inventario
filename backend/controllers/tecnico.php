@@ -341,25 +341,22 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['actualiz
         $mensaje = 'El motivo de cancelación no puede exceder 2000 caracteres.';
         $tipoMensaje = 'danger';
     } else {
-        $ordenStmt = $pdo->prepare('SELECT id FROM ordenes WHERE id = :id AND tecnico_id = :tecnico_id LIMIT 1');
-        $ordenStmt->execute(['id' => $ordenId, 'tecnico_id' => $tecnicoIdSesion]);
+        $tecnicosEquipoOrden = getTecnicosMismoVehiculo($pdo, $tecnicoIdSesion);
+        $marcadoresTecnicosOrden = implode(', ', array_fill(0, count($tecnicosEquipoOrden), '?'));
+        $ordenStmt = $pdo->prepare("SELECT id FROM ordenes WHERE id = ? AND tecnico_id IN ({$marcadoresTecnicosOrden}) LIMIT 1");
+        $ordenStmt->execute(array_merge([$ordenId], $tecnicosEquipoOrden));
         if (!$ordenStmt->fetchColumn()) {
             $mensaje = 'No se encontró la orden asignada.';
             $tipoMensaje = 'danger';
         } else {
             if ($estado === 'cancelado') {
-                $pdo->prepare('UPDATE ordenes SET estado = :estado, motivo_cancelacion = :motivo_cancelacion WHERE id = :id AND tecnico_id = :tecnico_id')->execute([
-                    'estado' => $estado,
-                    'motivo_cancelacion' => $motivoCancelacion,
-                    'id' => $ordenId,
-                    'tecnico_id' => $tecnicoIdSesion,
-                ]);
+                $pdo->prepare("UPDATE ordenes SET estado = ?, motivo_cancelacion = ? WHERE id = ? AND tecnico_id IN ({$marcadoresTecnicosOrden})")->execute(
+                    array_merge([$estado, $motivoCancelacion, $ordenId], $tecnicosEquipoOrden)
+                );
             } else {
-                $pdo->prepare('UPDATE ordenes SET estado = :estado WHERE id = :id AND tecnico_id = :tecnico_id')->execute([
-                    'estado' => $estado,
-                    'id' => $ordenId,
-                    'tecnico_id' => $tecnicoIdSesion,
-                ]);
+                $pdo->prepare("UPDATE ordenes SET estado = ? WHERE id = ? AND tecnico_id IN ({$marcadoresTecnicosOrden})")->execute(
+                    array_merge([$estado, $ordenId], $tecnicosEquipoOrden)
+                );
             }
             $detalle = "Orden actualizada a estado {$estado}.";
             if ($estado === 'cancelado') {

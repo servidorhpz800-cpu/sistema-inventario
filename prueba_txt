@@ -25,3 +25,17 @@ ALTER TABLE ordenes
 -- Equipos de técnicos que comparten el inventario de módems por vehículo.
 UPDATE usuarios SET equipo = 'Coche Blanco' WHERE usuario IN ('dario', 'joshua') AND rol = 'tecnico';
 UPDATE usuarios SET equipo = 'Camioneta Azul' WHERE usuario IN ('kevin', 'jorge') AND rol = 'tecnico';
+
+-- Verifica que las asignaciones de vehículo estén correctas:
+SELECT usuario, nombre, equipo
+FROM usuarios
+WHERE usuario IN ('dario', 'joshua', 'kevin', 'jorge')
+ORDER BY equipo, usuario;
+
+-- Revisa que sea el reporte correcto antes de eliminarlo.
+SELECT id, cliente_nombre, cliente_numero, domicilio_calles, descripcion, created_at
+FROM reportes
+WHERE id = 30001;
+
+-- Ejecuta esta instrucción solo después de verificar el reporte.
+-- DELETE FROM reportes WHERE id = 30001;

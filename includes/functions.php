@@ -118,9 +118,11 @@ function getOrdenes(PDO $pdo, ?int $tecnicoId = null, bool $archivadas = false):
     $sql = "SELECT o.*, e.tipo, e.marca, e.modelo, e.serial, e.condicion, u.nombre AS tecnico FROM ordenes o LEFT JOIN equipos e ON e.id = o.equipo_id JOIN usuarios u ON u.id = o.tecnico_id WHERE o.tipo_orden <> 'revision' AND {$filtroArchivo}";
 
     if ($tecnicoId !== null) {
-        $sql .= " AND o.tecnico_id = :tecnicoId AND o.estado <> 'completado'";
+        $tecnicosEquipo = getTecnicosMismoVehiculo($pdo, $tecnicoId);
+        $marcadoresTecnicos = implode(', ', array_fill(0, count($tecnicosEquipo), '?'));
+        $sql .= " AND o.tecnico_id IN ({$marcadoresTecnicos}) AND o.estado <> 'completado'";
         $stmt = $pdo->prepare($sql . ' ORDER BY o.created_at DESC');
-        $stmt->execute(['tecnicoId' => $tecnicoId]);
+        $stmt->execute($tecnicosEquipo);
         return $stmt->fetchAll();
     }
 
@@ -141,8 +143,10 @@ function getReportes(PDO $pdo, ?int $tecnicoId = null, bool $archivadas = false)
         WHERE {$filtroArchivo}";
 
     if ($tecnicoId !== null) {
-        $stmt = $pdo->prepare($sql . ' AND r.tecnico_id = :tecnicoId ORDER BY r.created_at DESC');
-        $stmt->execute(['tecnicoId' => $tecnicoId]);
+        $tecnicosEquipo = getTecnicosMismoVehiculo($pdo, $tecnicoId);
+        $marcadoresTecnicos = implode(', ', array_fill(0, count($tecnicosEquipo), '?'));
+        $stmt = $pdo->prepare($sql . " AND r.tecnico_id IN ({$marcadoresTecnicos}) ORDER BY r.created_at DESC");
+        $stmt->execute($tecnicosEquipo);
         $reportes = $stmt->fetchAll();
     } else {
         $stmt = $pdo->query($sql . ' ORDER BY r.created_at DESC');

@@ -54,7 +54,7 @@
                                 <article class="order-item technician-order" data-order-type="<?php echo htmlspecialchars($orden['tipo_orden']); ?>">
                                     <div class="order-item-head">
                                         <div>
-                                            <span class="eyebrow">Orden #<?php echo (int)$orden['id']; ?></span>
+                                            <span class="eyebrow">Orden #<?php echo (int)$orden['id']; ?> · Asignada a: <?php echo htmlspecialchars((string)$orden['tecnico']); ?></span>
                                             <h4><?php echo htmlspecialchars(str_replace('_', ' ', ucfirst($orden['tipo_orden']))); ?></h4>
                                         </div>
                                         <span class="badge <?php echo badgeClass($orden['estado']); ?>"><?php echo htmlspecialchars($orden['estado']); ?></span>
@@ -110,7 +110,7 @@
                             <select name="orden_id">
                                 <option value="0">Sin orden específica</option>
                                 <?php foreach ($ordenes as $orden): ?>
-                                    <option value="<?php echo (int)$orden['id']; ?>" data-cliente-nombre="<?php echo htmlspecialchars((string)($orden['cliente_nombre'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-cliente-numero="<?php echo htmlspecialchars((string)($orden['cliente_numero'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-ciudad="<?php echo htmlspecialchars((string)($orden['ciudad'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-direccion="<?php echo htmlspecialchars(trim(($orden['calle'] ?? '') . ' ' . ($orden['numero_exterior'] ?? '') . ((string)($orden['colonia'] ?? '') !== '' ? ', ' . $orden['colonia'] : '')), ENT_QUOTES, 'UTF-8'); ?>" data-ip="<?php echo htmlspecialchars((string)($orden['ip_asignada'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars(str_replace('_', ' ', ucfirst((string)($orden['tipo_orden'] ?? 'Sin tipo de orden'))), ENT_QUOTES, 'UTF-8'); ?> · Cliente: <?php echo htmlspecialchars((string)(trim((string)($orden['cliente_nombre'] ?? '')) ?: 'Sin cliente'), ENT_QUOTES, 'UTF-8'); ?></option>
+                                    <option value="<?php echo (int)$orden['id']; ?>" data-cliente-nombre="<?php echo htmlspecialchars((string)($orden['cliente_nombre'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-cliente-numero="<?php echo htmlspecialchars((string)($orden['cliente_numero'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-ciudad="<?php echo htmlspecialchars((string)($orden['ciudad'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-direccion="<?php echo htmlspecialchars(trim(($orden['calle'] ?? '') . ' ' . ($orden['numero_exterior'] ?? '') . ((string)($orden['colonia'] ?? '') !== '' ? ', ' . $orden['colonia'] : '')), ENT_QUOTES, 'UTF-8'); ?>" data-ip="<?php echo htmlspecialchars((string)($orden['ip_asignada'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars(str_replace('_', ' ', ucfirst((string)($orden['tipo_orden'] ?? 'Sin tipo de orden'))), ENT_QUOTES, 'UTF-8'); ?> · Cliente: <?php echo htmlspecialchars((string)(trim((string)($orden['cliente_nombre'] ?? '')) ?: 'Sin cliente'), ENT_QUOTES, 'UTF-8'); ?> · Asignada a: <?php echo htmlspecialchars((string)$orden['tecnico'], ENT_QUOTES, 'UTF-8'); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </label>
