@@ -23,8 +23,15 @@ ALTER TABLE ordenes
     ADD COLUMN IF NOT EXISTS motivo_cancelacion TEXT DEFAULT NULL AFTER descripcion;
 
 -- Equipos de técnicos que comparten el inventario de módems por vehículo.
-UPDATE usuarios SET equipo = 'Coche Blanco' WHERE usuario IN ('dario', 'joshua') AND rol = 'tecnico';
-UPDATE usuarios SET equipo = 'Camioneta Azul' WHERE usuario IN ('kevin', 'jorge') AND rol = 'tecnico';
+UPDATE usuarios
+SET equipo = CASE LOWER(usuario)
+    WHEN 'dario' THEN 'Coche Blanco'
+    WHEN 'joshua' THEN 'Coche Blanco'
+    WHEN 'kevin' THEN 'Camioneta Azul'
+    WHEN 'jorge' THEN 'Camioneta Azul'
+END
+WHERE LOWER(usuario) IN ('dario', 'joshua', 'kevin', 'jorge')
+  AND rol = 'tecnico';
 
 -- Verifica que las asignaciones de vehículo estén correctas:
 SELECT usuario, nombre, equipo

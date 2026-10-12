@@ -132,9 +132,11 @@ function getOrdenes(PDO $pdo, ?int $tecnicoId = null, bool $archivadas = false):
 
 function getReportes(PDO $pdo, ?int $tecnicoId = null, bool $archivadas = false): array
 {
-    $filtroArchivo = $archivadas
-        ? "r.created_at < CURRENT_DATE AND (o.id IS NULL OR o.estado <> 'pendiente')"
-        : "(r.created_at >= CURRENT_DATE OR o.estado = 'pendiente')";
+    $filtroArchivo = $tecnicoId !== null
+        ? '1 = 1'
+        : ($archivadas
+            ? "r.created_at < CURRENT_DATE AND (o.id IS NULL OR o.estado <> 'pendiente')"
+            : "(r.created_at >= CURRENT_DATE OR o.estado = 'pendiente')");
     $sql = "SELECT r.*, u.nombre AS tecnico, o.tipo_orden, o.estado AS orden_estado, COALESCE(NULLIF(TRIM(r.cliente_nombre), ''), o.cliente_nombre) AS cliente_nombre_actual, COALESCE(NULLIF(TRIM(r.cliente_numero), ''), o.cliente_numero) AS cliente_numero_actual, COALESCE(NULLIF(TRIM(r.ciudad), ''), o.ciudad) AS ciudad_actual, o.calle, o.numero_exterior, o.colonia, o.referencias, o.ubicacion_url, o.ip_asignada, e.tipo AS equipo_tipo, e.marca AS equipo_marca, e.modelo AS equipo_modelo, e.serial AS equipo_serial
         FROM reportes r
         JOIN usuarios u ON u.id = r.tecnico_id
