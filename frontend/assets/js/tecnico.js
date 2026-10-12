@@ -49,16 +49,18 @@ const filtroOrdenes = document.getElementById('filtroOrdenes');
         const ciudadReporte = document.querySelector('#reporteTecnicoForm input[name="ciudad"]');
         const domicilioReporte = document.querySelector('#reporteTecnicoForm input[name="domicilio_calles"]');
         const ipClienteReporte = document.querySelector('#reporteTecnicoForm input[name="ip_cliente"]');
-        const agregarFotoReporte = document.getElementById('agregarFotoReporte');
+        const tomarFotoReporte = document.getElementById('tomarFotoReporte');
+        const seleccionarFotoReporte = document.getElementById('seleccionarFotoReporte');
         const fotosReportePreview = document.getElementById('fotosReportePreview');
-        let cantidadFotosReporte = 0;
 
-        agregarFotoReporte?.addEventListener('click', () => {
+        const seleccionarFoto = (capturarFoto) => {
             const inputFoto = document.createElement('input');
             inputFoto.type = 'file';
             inputFoto.name = 'foto_reporte[]';
             inputFoto.accept = 'image/jpeg,image/png,image/webp';
-            inputFoto.capture = 'environment';
+            if (capturarFoto) {
+                inputFoto.capture = 'environment';
+            }
             inputFoto.hidden = true;
             document.getElementById('reporteTecnicoForm').appendChild(inputFoto);
 
@@ -69,7 +71,6 @@ const filtroOrdenes = document.getElementById('filtroOrdenes');
                     return;
                 }
 
-                cantidadFotosReporte++;
                 const elementoFoto = document.createElement('div');
                 elementoFoto.className = 'report-photo-item';
 
@@ -89,17 +90,17 @@ const filtroOrdenes = document.getElementById('filtroOrdenes');
                     URL.revokeObjectURL(miniatura.src);
                     inputFoto.remove();
                     elementoFoto.remove();
-                    cantidadFotosReporte--;
-                    agregarFotoReporte.textContent = cantidadFotosReporte > 0 ? 'Subir otra imagen' : 'Subir imagen';
                 });
 
                 elementoFoto.append(miniatura, nombreFoto, quitarFoto);
                 fotosReportePreview.appendChild(elementoFoto);
-                agregarFotoReporte.textContent = 'Subir otra imagen';
             });
 
             inputFoto.click();
-        });
+        };
+
+        tomarFotoReporte?.addEventListener('click', () => seleccionarFoto(true));
+        seleccionarFotoReporte?.addEventListener('click', () => seleccionarFoto(false));
 
         const completarClienteReporte = (select) => {
             const opcion = select?.selectedOptions[0];

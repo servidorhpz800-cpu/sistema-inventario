@@ -856,6 +856,12 @@ textarea {
     letter-spacing: 0.04em;
 }
 
+.report-photo-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
 .report-photo-list {
     display: grid;
     width: 100%;

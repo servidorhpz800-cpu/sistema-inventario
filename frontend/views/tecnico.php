@@ -184,7 +184,10 @@
                         </label>
                         <div class="report-photo-upload">
                             <div class="section-label">Imágenes de lo realizado</div>
-                            <button type="button" id="agregarFotoReporte" class="btn btn-secondary">Subir imagen</button>
+                            <div class="report-photo-actions">
+                                <button type="button" id="tomarFotoReporte" class="btn btn-secondary">Tomar foto</button>
+                                <button type="button" id="seleccionarFotoReporte" class="btn btn-secondary">Elegir de galería</button>
+                            </div>
                             <div id="fotosReportePreview" class="report-photo-list" aria-live="polite"></div>
                         </div>
                         <p class="form-note">Los límites de tamaño y cantidad de imágenes dependen de la configuración del servidor.</p>
