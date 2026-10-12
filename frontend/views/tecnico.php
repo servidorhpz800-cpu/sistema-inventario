@@ -185,8 +185,14 @@
                         <div class="report-photo-upload">
                             <div class="section-label">Imágenes de lo realizado</div>
                             <div class="report-photo-actions">
-                                <button type="button" id="tomarFotoReporte" class="btn btn-secondary">Tomar foto</button>
-                                <button type="button" id="seleccionarFotoReporte" class="btn btn-secondary">Elegir de galería</button>
+                                <label class="btn btn-secondary report-photo-picker">
+                                    Tomar foto
+                                    <input type="file" name="foto_reporte[]" accept="image/jpeg,image/png,image/webp" capture="environment" data-report-photo-input>
+                                </label>
+                                <label class="btn btn-secondary report-photo-picker">
+                                    Elegir de galería
+                                    <input type="file" name="foto_reporte[]" accept="image/jpeg,image/png,image/webp" data-report-photo-input>
+                                </label>
                             </div>
                             <div id="fotosReportePreview" class="report-photo-list" aria-live="polite"></div>
                         </div>

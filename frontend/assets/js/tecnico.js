@@ -49,34 +49,27 @@ const filtroOrdenes = document.getElementById('filtroOrdenes');
         const ciudadReporte = document.querySelector('#reporteTecnicoForm input[name="ciudad"]');
         const domicilioReporte = document.querySelector('#reporteTecnicoForm input[name="domicilio_calles"]');
         const ipClienteReporte = document.querySelector('#reporteTecnicoForm input[name="ip_cliente"]');
-        const tomarFotoReporte = document.getElementById('tomarFotoReporte');
-        const seleccionarFotoReporte = document.getElementById('seleccionarFotoReporte');
         const fotosReportePreview = document.getElementById('fotosReportePreview');
+        const reporteTecnicoForm = document.getElementById('reporteTecnicoForm');
 
-        const seleccionarFoto = (capturarFoto) => {
-            const inputFoto = document.createElement('input');
-            inputFoto.type = 'file';
-            inputFoto.name = 'foto_reporte[]';
-            inputFoto.accept = 'image/jpeg,image/png,image/webp';
-            if (capturarFoto) {
-                inputFoto.capture = 'environment';
-            }
-            inputFoto.hidden = true;
-            document.getElementById('reporteTecnicoForm').appendChild(inputFoto);
-
+        const prepararSelectorFoto = (inputFoto) => {
             inputFoto.addEventListener('change', () => {
                 const archivo = inputFoto.files?.[0];
-                if (!archivo) {
-                    inputFoto.remove();
+                if (!archivo || !reporteTecnicoForm) {
                     return;
                 }
+
+                const siguienteInputFoto = inputFoto.cloneNode();
+                inputFoto.replaceWith(siguienteInputFoto);
+                inputFoto.hidden = true;
+                reporteTecnicoForm.appendChild(inputFoto);
 
                 const elementoFoto = document.createElement('div');
                 elementoFoto.className = 'report-photo-item';
 
                 const miniatura = document.createElement('img');
                 miniatura.src = URL.createObjectURL(archivo);
-                miniatura.alt = `Imagen adjunta ${cantidadFotosReporte}`;
+                miniatura.alt = `Imagen adjunta: ${archivo.name}`;
 
                 const nombreFoto = document.createElement('span');
                 nombreFoto.textContent = archivo.name;
@@ -94,13 +87,11 @@ const filtroOrdenes = document.getElementById('filtroOrdenes');
 
                 elementoFoto.append(miniatura, nombreFoto, quitarFoto);
                 fotosReportePreview.appendChild(elementoFoto);
+                prepararSelectorFoto(siguienteInputFoto);
             });
-
-            inputFoto.click();
         };
 
-        tomarFotoReporte?.addEventListener('click', () => seleccionarFoto(true));
-        seleccionarFotoReporte?.addEventListener('click', () => seleccionarFoto(false));
+        document.querySelectorAll('#reporteTecnicoForm [data-report-photo-input]').forEach(prepararSelectorFoto);
 
         const completarClienteReporte = (select) => {
             const opcion = select?.selectedOptions[0];

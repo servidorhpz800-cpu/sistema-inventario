@@ -862,6 +862,34 @@ textarea {
     gap: 8px;
 }
 
+.report-photo-picker {
+    position: relative;
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: var(--primary-dark);
+}
+
+.report-photo-picker input[type="file"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+.report-photo-picker:focus-within {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
 .report-photo-list {
     display: grid;
     width: 100%;
