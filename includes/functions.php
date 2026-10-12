@@ -118,7 +118,7 @@ function getOrdenes(PDO $pdo, ?int $tecnicoId = null, bool $archivadas = false):
     $sql = "SELECT o.*, e.tipo, e.marca, e.modelo, e.serial, e.condicion, u.nombre AS tecnico FROM ordenes o LEFT JOIN equipos e ON e.id = o.equipo_id JOIN usuarios u ON u.id = o.tecnico_id WHERE o.tipo_orden <> 'revision' AND {$filtroArchivo}";
 
     if ($tecnicoId !== null) {
-        $sql .= ' AND o.tecnico_id = :tecnicoId';
+        $sql .= " AND o.tecnico_id = :tecnicoId AND o.estado <> 'completado'";
         $stmt = $pdo->prepare($sql . ' ORDER BY o.created_at DESC');
         $stmt->execute(['tecnicoId' => $tecnicoId]);
         return $stmt->fetchAll();
