@@ -103,7 +103,7 @@
                             <select name="orden_id">
                                 <option value="0">Sin orden específica</option>
                                 <?php foreach ($ordenes as $orden): ?>
-                                    <option value="<?php echo (int)$orden['id']; ?>" data-cliente-nombre="<?php echo htmlspecialchars((string)($orden['cliente_nombre'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-cliente-numero="<?php echo htmlspecialchars((string)($orden['cliente_numero'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-ciudad="<?php echo htmlspecialchars((string)($orden['ciudad'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars((string)($orden['tipo'] ?? 'Sin tipo'), ENT_QUOTES, 'UTF-8'); ?> - <?php echo htmlspecialchars((string)($orden['tipo_orden'] ?? 'Sin tipo de orden'), ENT_QUOTES, 'UTF-8'); ?></option>
+                                    <option value="<?php echo (int)$orden['id']; ?>" data-cliente-nombre="<?php echo htmlspecialchars((string)($orden['cliente_nombre'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-cliente-numero="<?php echo htmlspecialchars((string)($orden['cliente_numero'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-ciudad="<?php echo htmlspecialchars((string)($orden['ciudad'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-direccion="<?php echo htmlspecialchars(trim(($orden['calle'] ?? '') . ' ' . ($orden['numero_exterior'] ?? '') . ((string)($orden['colonia'] ?? '') !== '' ? ', ' . $orden['colonia'] : '')), ENT_QUOTES, 'UTF-8'); ?>" data-ip="<?php echo htmlspecialchars((string)($orden['ip_asignada'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars((string)($orden['tipo'] ?? 'Sin tipo'), ENT_QUOTES, 'UTF-8'); ?> - <?php echo htmlspecialchars((string)($orden['tipo_orden'] ?? 'Sin tipo de orden'), ENT_QUOTES, 'UTF-8'); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </label>
@@ -133,9 +133,31 @@
                                 </label>
                             </div>
                         <label>
-                            <span>Título</span>
-                            <input type="text" name="titulo" placeholder="Reporte de instalación / retiro / daño">
+                            <span>Domicilio o calles</span>
+                            <input type="text" name="domicilio_calles" maxlength="180" placeholder="Calle, número y referencias del domicilio" required>
                         </label>
+                        <div class="form-grid">
+                            <label>
+                                <span>Total</span>
+                                <input type="number" name="total" min="0" max="9999999999.99" step="0.01" placeholder="0.00">
+                            </label>
+                            <label>
+                                <span>Saldo</span>
+                                <input type="number" name="saldo" min="0" max="9999999999.99" step="0.01" placeholder="0.00">
+                            </label>
+                            <label>
+                                <span>Nombre del servicio</span>
+                                <input type="text" name="nombre_servicio" maxlength="150">
+                            </label>
+                            <label>
+                                <span>Plan del cliente</span>
+                                <input type="text" name="plan_cliente" maxlength="150">
+                            </label>
+                            <label>
+                                <span>Dirección IP</span>
+                                <input type="text" name="ip_cliente" maxlength="45" placeholder="IPv4 o IPv6">
+                            </label>
+                        </div>
                         <label>
                             <span>Estado del equipo</span>
                             <select name="estado_equipo">
@@ -163,6 +185,16 @@
                         <input type="hidden" name="longitud" id="longitudReporte">
                         <button type="button" id="capturarUbicacion" class="btn btn-secondary">Capturar ubicación actual</button>
                         <p class="form-note">Al enviar el reporte, la ciudad y la ubicación GPS se guardarán en el cliente para facilitar próximas visitas.</p>
+                        <div class="signature-field">
+                            <label for="firmaClienteCanvas">Firma del cliente</label>
+                            <p class="form-note">Pide al cliente que firme aquí con el dedo o el lápiz del teléfono.</p>
+                            <canvas id="firmaClienteCanvas" width="900" height="270" tabindex="0" aria-label="Área para la firma del cliente"></canvas>
+                            <input type="hidden" name="firma_cliente" id="firmaClienteInput">
+                            <div class="signature-actions">
+                                <span id="firmaClienteEstado" class="form-note" aria-live="polite">La firma es obligatoria.</span>
+                                <button type="button" id="limpiarFirmaCliente" class="btn btn-secondary">Borrar firma</button>
+                            </div>
+                        </div>
                         <button type="submit" name="guardar_reporte" class="btn btn-success">Enviar reporte</button>
                     </form>
                 </div>
@@ -238,7 +270,7 @@
                     <table class="table">
                         <thead>
                             <tr>
-                                <th>Título</th>
+                                <th>Domicilio o calles</th>
                                 <th>Estado</th>
                                 <th>Actividad / resultado</th>
                                 <th>Detalle</th>
@@ -249,7 +281,7 @@
                         <tbody>
                             <?php foreach ($reportes as $reporte): ?>
                                 <tr>
-                                    <td><?php echo htmlspecialchars($reporte['titulo']); ?><br><small>Movimiento <?php echo $reporte['movimiento_id'] ? '#' . (int)$reporte['movimiento_id'] : 'sin despacho'; ?></small></td>
+                                    <td><?php echo htmlspecialchars($reporte['domicilio_calles']); ?><br><small>Movimiento <?php echo $reporte['movimiento_id'] ? '#' . (int)$reporte['movimiento_id'] : 'sin despacho'; ?></small></td>
                                     <td><span class="badge <?php echo badgeClass($reporte['estado']); ?>"><?php echo htmlspecialchars($reporte['estado']); ?></span></td>
                                     <td>
                                         <strong>Cliente:</strong> <?php echo htmlspecialchars($reporte['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($reporte['cliente_numero'] ?: 'Sin número'); ?><br>
@@ -257,10 +289,16 @@
                                         <?php echo htmlspecialchars($reporte['actividad_realizada'] ?: 'Sin actividad detallada'); ?><br>
                                         <strong>Resultado:</strong> <?php echo htmlspecialchars($reporte['resultado'] ?: 'Sin resultado'); ?><br>
                                         <strong>Materiales:</strong> <?php echo htmlspecialchars($reporte['materiales'] ?: 'Ninguno'); ?>
+                                        <br><strong>Total:</strong> <?php echo $reporte['total'] !== null ? htmlspecialchars(number_format((float)$reporte['total'], 2)) : 'Sin dato'; ?>
+                                        · <strong>Saldo:</strong> <?php echo $reporte['saldo'] !== null ? htmlspecialchars(number_format((float)$reporte['saldo'], 2)) : 'Sin dato'; ?>
+                                        <br><strong>Servicio:</strong> <?php echo htmlspecialchars($reporte['nombre_servicio'] ?: 'Sin dato'); ?>
+                                        · <strong>Plan:</strong> <?php echo htmlspecialchars($reporte['plan_cliente'] ?: 'Sin dato'); ?>
+                                        <br><strong>Dirección IP:</strong> <?php echo htmlspecialchars($reporte['ip_cliente'] ?: 'Sin dato'); ?>
                                     </td>
                                     <td><?php echo htmlspecialchars($reporte['descripcion']); ?></td>
                                     <td>
                                         <?php foreach ($reporte['fotos'] as $indiceFoto => $foto): ?><?php $urlFoto = urlEvidenciaReporte((string)$foto); ?><?php if ($urlFoto !== ''): ?><a href="<?php echo htmlspecialchars($urlFoto, ENT_QUOTES); ?>" target="_blank" rel="noopener">Ver imagen <?php echo (int)($indiceFoto + 1); ?></a><br><?php endif; ?><?php endforeach; ?>
+                                        <?php $urlFirmaCliente = !empty($reporte['firma_cliente']) ? urlEvidenciaReporte((string)$reporte['firma_cliente']) : ''; ?><?php if ($urlFirmaCliente !== ''): ?><a href="<?php echo htmlspecialchars($urlFirmaCliente, ENT_QUOTES); ?>" target="_blank" rel="noopener">Ver firma del cliente</a><br><?php endif; ?>
                                         <?php if ($reporte['latitud'] !== null && $reporte['longitud'] !== null): ?><a href="https://www.google.com/maps?q=<?php echo urlencode($reporte['latitud'] . ',' . $reporte['longitud']); ?>" target="_blank" rel="noopener">Ver ubicación</a><?php endif; ?>
                                     </td>
                                     <td><?php echo htmlspecialchars(date('d/m/Y H:i', strtotime($reporte['created_at']))); ?></td>

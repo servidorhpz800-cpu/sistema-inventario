@@ -580,7 +580,7 @@
                                 <summary class="order-item-head">
                                     <div>
                                         <span class="eyebrow">Reporte #<?php echo (int)$reporte['id']; ?> · Orden <?php echo $reporte['orden_id'] ? '#' . (int)$reporte['orden_id'] : 'sin orden'; ?> · Movimiento <?php echo $reporte['movimiento_id'] ? '#' . (int)$reporte['movimiento_id'] : 'sin despacho'; ?></span>
-                                        <h4><?php echo htmlspecialchars($reporte['titulo']); ?> · <?php echo htmlspecialchars($reporte['cliente_nombre'] ?: 'Sin cliente'); ?></h4>
+                                        <h4><?php echo htmlspecialchars($reporte['domicilio_calles']); ?> · <?php echo htmlspecialchars($reporte['cliente_nombre'] ?: 'Sin cliente'); ?></h4>
                                     </div>
                                     <span class="badge <?php echo badgeClass($reporte['estado']); ?>"><?php echo htmlspecialchars($reporte['estado']); ?></span>
                                 </summary>
@@ -591,6 +591,9 @@
                                         <div><span>Cliente</span><?php echo htmlspecialchars($reporte['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($reporte['cliente_numero'] ?: 'Sin número'); ?></div>
                                         <div><span>Pueblo o ciudad</span><?php echo htmlspecialchars($reporte['ciudad'] ?: 'Sin ciudad'); ?></div>
                                         <div><span>Domicilio</span><?php echo htmlspecialchars($direccionReporte ?: 'Sin domicilio registrado'); ?></div>
+                                        <div><span>Total / saldo</span><?php echo $reporte['total'] !== null ? htmlspecialchars(number_format((float)$reporte['total'], 2)) : 'Sin dato'; ?> / <?php echo $reporte['saldo'] !== null ? htmlspecialchars(number_format((float)$reporte['saldo'], 2)) : 'Sin dato'; ?></div>
+                                        <div><span>Servicio / plan</span><?php echo htmlspecialchars($reporte['nombre_servicio'] ?: 'Sin dato'); ?> / <?php echo htmlspecialchars($reporte['plan_cliente'] ?: 'Sin dato'); ?></div>
+                                        <div><span>Dirección IP</span><?php echo htmlspecialchars($reporte['ip_cliente'] ?: 'Sin dato'); ?></div>
                                         <div><span>Equipo</span><?php echo htmlspecialchars(trim(($reporte['equipo_tipo'] ?: '') . ' ' . ($reporte['equipo_marca'] ?: '') . ' ' . ($reporte['equipo_serial'] ?: '')) ?: 'Sin equipo'); ?></div>
                                     </div>
                                     <p class="order-description"><strong>Actividad:</strong> <?php echo htmlspecialchars($reporte['actividad_realizada'] ?: 'Sin detalle'); ?></p>
@@ -599,6 +602,7 @@
                                     <?php if (!empty($reporte['materiales'])): ?><p class="order-description"><strong>Materiales:</strong> <?php echo htmlspecialchars($reporte['materiales']); ?></p><?php endif; ?>
                                     <div class="inline-actions">
                                         <?php foreach ($reporte['fotos'] as $indiceFoto => $foto): ?><?php $urlFoto = urlEvidenciaReporte((string)$foto); ?><?php if ($urlFoto !== ''): ?><a href="<?php echo htmlspecialchars($urlFoto, ENT_QUOTES); ?>" target="_blank" rel="noopener" class="btn btn-secondary">Ver imagen <?php echo (int)($indiceFoto + 1); ?></a><?php endif; ?><?php endforeach; ?>
+                                        <?php $urlFirmaCliente = !empty($reporte['firma_cliente']) ? urlEvidenciaReporte((string)$reporte['firma_cliente']) : ''; ?><?php if ($urlFirmaCliente !== ''): ?><a href="<?php echo htmlspecialchars($urlFirmaCliente, ENT_QUOTES); ?>" target="_blank" rel="noopener" class="btn btn-secondary">Ver firma del cliente</a><?php endif; ?>
                                         <?php if ($urlMapaReporte !== ''): ?><a href="<?php echo htmlspecialchars($urlMapaReporte, ENT_QUOTES); ?>" target="_blank" rel="noopener" class="btn btn-secondary">Ver ubicación</a><?php endif; ?>
                                     </div>
                                 </div>

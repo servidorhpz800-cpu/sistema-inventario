@@ -62,13 +62,22 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
     $ordenId = (int)($_POST['orden_id'] ?? 0);
     $ordenId = $ordenId > 0 ? $ordenId : null;
     $movimientoId = (int)($_POST['movimiento_reporte_id'] ?? 0);
-    $titulo = trim($_POST['titulo'] ?? '');
+    $domicilioCalles = trim($_POST['domicilio_calles'] ?? '');
     $descripcion = trim($_POST['descripcion'] ?? '');
     $ciudadReporte = trim($_POST['ciudad'] ?? '');
     $estadoEquipo = $_POST['estado_equipo'] ?? 'normal';
     $actividad = trim($_POST['actividad_realizada'] ?? '');
     $materiales = trim($_POST['materiales'] ?? '');
     $resultado = trim($_POST['resultado'] ?? '');
+    $totalOriginal = trim((string)($_POST['total'] ?? ''));
+    $saldoOriginal = trim((string)($_POST['saldo'] ?? ''));
+    $nombreServicio = trim($_POST['nombre_servicio'] ?? '');
+    $planCliente = trim($_POST['plan_cliente'] ?? '');
+    $ipCliente = trim($_POST['ip_cliente'] ?? '');
+    $firmaData = trim((string)($_POST['firma_cliente'] ?? ''));
+    $firmaBinaria = null;
+    $total = null;
+    $saldo = null;
     $clienteNombreReporte = trim($_POST['cliente_nombre'] ?? '');
     $clienteNumeroReporte = trim($_POST['cliente_numero'] ?? '');
     $latitudOriginal = trim((string)($_POST['latitud'] ?? ''));
@@ -93,10 +102,56 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
             $ubicacionUrlReporte = 'https://www.google.com/maps?q=' . rawurlencode($latitud . ',' . $longitud);
         }
     }
+    foreach (['total' => $totalOriginal, 'saldo' => $saldoOriginal] as $campoMonto => $montoOriginal) {
+        if ($montoOriginal === '') {
+            continue;
+        }
+        if (preg_match('/\A\d{1,10}(?:\.\d{1,2})?\z/', $montoOriginal) !== 1) {
+            $mensaje = 'El total y el saldo deben ser cantidades válidas, sin negativos y con máximo dos decimales.';
+            $tipoMensaje = 'danger';
+            break;
+        }
+        if ($campoMonto === 'total') {
+            $total = $montoOriginal;
+        } else {
+            $saldo = $montoOriginal;
+        }
+    }
+    if ($ipCliente !== '' && filter_var($ipCliente, FILTER_VALIDATE_IP) === false) {
+        $mensaje = 'La dirección IP no es válida.';
+        $tipoMensaje = 'danger';
+    }
+    if ($firmaData === '') {
+        $mensaje = 'El cliente debe firmar en la pantalla antes de enviar el reporte.';
+        $tipoMensaje = 'danger';
+    } elseif (preg_match('/\Adata:image\/png;base64,([A-Za-z0-9+\/=]+)\z/', $firmaData, $firmaCoincidencias) !== 1) {
+        $mensaje = 'La firma no tiene un formato válido. Vuelve a firmar e inténtalo de nuevo.';
+        $tipoMensaje = 'danger';
+    } else {
+        $firmaBinaria = strlen($firmaCoincidencias[1]) <= 1398104
+            ? base64_decode($firmaCoincidencias[1], true)
+            : false;
+        $datosImagenFirma = $firmaBinaria !== false ? @getimagesizefromstring($firmaBinaria) : false;
+        if (
+            $firmaBinaria === false
+            || strlen($firmaBinaria) > 1048576
+            || $datosImagenFirma === false
+            || $datosImagenFirma['mime'] !== 'image/png'
+            || $datosImagenFirma[0] < 1
+            || $datosImagenFirma[0] > 1200
+            || $datosImagenFirma[1] < 1
+            || $datosImagenFirma[1] > 400
+        ) {
+            $firmaBinaria = null;
+            $mensaje = 'No se pudo validar la firma. Vuelve a firmar e inténtalo de nuevo.';
+            $tipoMensaje = 'danger';
+        }
+    }
     $fotoUrl = null;
     $fotosTemporales = [];
     $fotosGuardadas = [];
     $directorioFotos = null;
+    $firmaGuardada = null;
 
     $subidaFotos = $_FILES['foto_reporte'] ?? null;
     if ($subidaFotos !== null) {
@@ -138,7 +193,7 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
         }
     }
 
-    if ($titulo !== '' && $tipoMensaje === 'success') {
+    if ($domicilioCalles !== '' && $tipoMensaje === 'success') {
         try {
             $pdo->beginTransaction();
             $datosOrden = null;
@@ -223,7 +278,7 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
                 : ($equipoDeOrden !== null ? (int)$equipoDeOrden : null);
 
             $directorioFotos = getReportesUploadDirectory();
-            if ($fotosTemporales && !is_dir($directorioFotos) && !mkdir($directorioFotos, 0755, true) && !is_dir($directorioFotos)) {
+            if (($fotosTemporales || $firmaBinaria !== null) && !is_dir($directorioFotos) && !mkdir($directorioFotos, 0755, true) && !is_dir($directorioFotos)) {
                 throw new RuntimeException('No se pudo crear el directorio de evidencias.');
             }
             foreach ($fotosTemporales as $fotoTemporal) {
@@ -235,7 +290,13 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
             }
             $fotoUrl = $fotosGuardadas[0] ?? null;
 
-            $stmt = $pdo->prepare('INSERT INTO reportes (tecnico_id, orden_id, equipo_id, movimiento_id, cliente_nombre, cliente_numero, ciudad, titulo, actividad_realizada, materiales, resultado, descripcion, latitud, longitud, foto_url, estado) VALUES (:tecnico_id, :orden_id, :equipo_id, :movimiento_id, :cliente_nombre, :cliente_numero, :ciudad, :titulo, :actividad_realizada, :materiales, :resultado, :descripcion, :latitud, :longitud, :foto_url, :estado)');
+            $firmaGuardada = 'firma-' . bin2hex(random_bytes(16)) . '.png';
+            $bytesFirma = file_put_contents($directorioFotos . DIRECTORY_SEPARATOR . $firmaGuardada, $firmaBinaria, LOCK_EX);
+            if ($bytesFirma === false || $bytesFirma !== strlen($firmaBinaria)) {
+                throw new RuntimeException('No se pudo guardar la firma del cliente.');
+            }
+
+            $stmt = $pdo->prepare('INSERT INTO reportes (tecnico_id, orden_id, equipo_id, movimiento_id, cliente_nombre, cliente_numero, ciudad, domicilio_calles, total, saldo, nombre_servicio, plan_cliente, ip_cliente, firma_cliente, actividad_realizada, materiales, resultado, descripcion, latitud, longitud, foto_url, estado) VALUES (:tecnico_id, :orden_id, :equipo_id, :movimiento_id, :cliente_nombre, :cliente_numero, :ciudad, :domicilio_calles, :total, :saldo, :nombre_servicio, :plan_cliente, :ip_cliente, :firma_cliente, :actividad_realizada, :materiales, :resultado, :descripcion, :latitud, :longitud, :foto_url, :estado)');
             $stmt->execute([
                 'tecnico_id' => $tecnicoIdSesion,
                 'orden_id' => $ordenId,
@@ -244,7 +305,13 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
                 'cliente_nombre' => $clienteNombreReporte,
                 'cliente_numero' => $clienteNumeroReporte,
                 'ciudad' => $ciudadReporte,
-                'titulo' => $titulo,
+                'domicilio_calles' => $domicilioCalles,
+                'total' => $total,
+                'saldo' => $saldo,
+                'nombre_servicio' => $nombreServicio !== '' ? $nombreServicio : null,
+                'plan_cliente' => $planCliente !== '' ? $planCliente : null,
+                'ip_cliente' => $ipCliente !== '' ? $ipCliente : null,
+                'firma_cliente' => $firmaGuardada,
                 'actividad_realizada' => $actividad,
                 'materiales' => $materiales,
                 'resultado' => $resultado,
@@ -288,16 +355,16 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
                 }
             }
 
-            registrarActividad($pdo, 'Técnico', 'Enviar reporte', 'reporte', $reporteId, "Reporte '{$titulo}' enviado con estado {$estadoEquipo}.");
+            registrarActividad($pdo, 'Técnico', 'Enviar reporte', 'reporte', $reporteId, "Reporte de domicilio '{$domicilioCalles}' enviado con estado {$estadoEquipo}.");
             $pdo->commit();
             $mensaje = 'Reporte enviado; el movimiento y el inventario se actualizaron con el resultado.';
         } catch (Throwable $error) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-            foreach ($fotosGuardadas as $fotoGuardada) {
+            foreach (array_merge($fotosGuardadas, $firmaGuardada !== null ? [$firmaGuardada] : []) as $archivoGuardado) {
                 $rutaFotoGuardada = $directorioFotos !== null
-                    ? $directorioFotos . DIRECTORY_SEPARATOR . basename($fotoGuardada)
+                    ? $directorioFotos . DIRECTORY_SEPARATOR . basename($archivoGuardado)
                     : null;
                 if ($rutaFotoGuardada !== null && is_file($rutaFotoGuardada)) {
                     unlink($rutaFotoGuardada);
@@ -308,7 +375,7 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
             $tipoMensaje = 'danger';
         }
     } elseif ($tipoMensaje === 'success') {
-        $mensaje = 'Debes completar el título del reporte.';
+        $mensaje = 'Debes completar el domicilio o las calles del servicio.';
         $tipoMensaje = 'danger';
     }
 }

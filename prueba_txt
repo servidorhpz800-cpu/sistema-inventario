@@ -1,0 +1,14 @@
+USE compuser_inventario;
+
+-- Solo si la columna todavia se llama "titulo", ejecuta esta instruccion una vez.
+-- Si ya aparece "domicilio_calles" en SHOW COLUMNS FROM reportes, dejala comentada.
+-- ALTER TABLE reportes CHANGE COLUMN titulo domicilio_calles VARCHAR(180) NOT NULL;
+
+-- Se agrega cada columna por separado para no depender de columnas creadas
+-- anteriormente en el mismo ALTER TABLE. Se pueden volver a ejecutar.
+ALTER TABLE reportes ADD COLUMN IF NOT EXISTS total DECIMAL(12, 2) DEFAULT NULL;
+ALTER TABLE reportes ADD COLUMN IF NOT EXISTS saldo DECIMAL(12, 2) DEFAULT NULL;
+ALTER TABLE reportes ADD COLUMN IF NOT EXISTS nombre_servicio VARCHAR(150) DEFAULT NULL;
+ALTER TABLE reportes ADD COLUMN IF NOT EXISTS plan_cliente VARCHAR(150) DEFAULT NULL;
+ALTER TABLE reportes ADD COLUMN IF NOT EXISTS ip_cliente VARCHAR(45) DEFAULT NULL;
+ALTER TABLE reportes ADD COLUMN IF NOT EXISTS firma_cliente VARCHAR(255) DEFAULT NULL;

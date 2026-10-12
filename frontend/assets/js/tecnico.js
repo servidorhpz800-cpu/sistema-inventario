@@ -30,6 +30,8 @@ const filtroOrdenes = document.getElementById('filtroOrdenes');
         const clienteNombreReporte = document.querySelector('#reporteTecnicoForm input[name="cliente_nombre"]');
         const clienteNumeroReporte = document.querySelector('#reporteTecnicoForm input[name="cliente_numero"]');
         const ciudadReporte = document.querySelector('#reporteTecnicoForm input[name="ciudad"]');
+        const domicilioReporte = document.querySelector('#reporteTecnicoForm input[name="domicilio_calles"]');
+        const ipClienteReporte = document.querySelector('#reporteTecnicoForm input[name="ip_cliente"]');
         const agregarFotoReporte = document.getElementById('agregarFotoReporte');
         const fotosReportePreview = document.getElementById('fotosReportePreview');
         let cantidadFotosReporte = 0;
@@ -88,11 +90,88 @@ const filtroOrdenes = document.getElementById('filtroOrdenes');
                 clienteNombreReporte.value = opcion.dataset.clienteNombre || '';
                 clienteNumeroReporte.value = opcion.dataset.clienteNumero || '';
                 ciudadReporte.value = opcion.dataset.ciudad || '';
+                domicilioReporte.value = opcion.dataset.direccion || '';
+                ipClienteReporte.value = opcion.dataset.ip || '';
             } else {
                 clienteNombreReporte.value = '';
                 clienteNumeroReporte.value = '';
                 ciudadReporte.value = '';
+                domicilioReporte.value = '';
+                ipClienteReporte.value = '';
             }
         };
         ordenReporteSelect?.addEventListener('change', () => completarClienteReporte(ordenReporteSelect));
         movimientoReporteSelect?.addEventListener('change', () => completarClienteReporte(movimientoReporteSelect));
+
+        const reporteForm = document.getElementById('reporteTecnicoForm');
+        const firmaCanvas = document.getElementById('firmaClienteCanvas');
+        const firmaInput = document.getElementById('firmaClienteInput');
+        const limpiarFirma = document.getElementById('limpiarFirmaCliente');
+        const firmaEstado = document.getElementById('firmaClienteEstado');
+        const firmaContexto = firmaCanvas?.getContext('2d');
+        let firmaTrazada = false;
+        let dibujandoFirma = false;
+
+        if (firmaCanvas && firmaInput && firmaContexto) {
+            firmaContexto.lineWidth = 5;
+            firmaContexto.lineCap = 'round';
+            firmaContexto.lineJoin = 'round';
+            firmaContexto.strokeStyle = '#172b4d';
+            firmaContexto.fillStyle = '#172b4d';
+
+            const puntoFirma = (evento) => {
+                const limites = firmaCanvas.getBoundingClientRect();
+                return {
+                    x: (evento.clientX - limites.left) * (firmaCanvas.width / limites.width),
+                    y: (evento.clientY - limites.top) * (firmaCanvas.height / limites.height),
+                };
+            };
+
+            firmaCanvas.addEventListener('pointerdown', (evento) => {
+                evento.preventDefault();
+                dibujandoFirma = true;
+                firmaCanvas.setPointerCapture(evento.pointerId);
+                const punto = puntoFirma(evento);
+                firmaContexto.beginPath();
+                firmaContexto.arc(punto.x, punto.y, firmaContexto.lineWidth / 2, 0, Math.PI * 2);
+                firmaContexto.fill();
+                firmaContexto.beginPath();
+                firmaContexto.moveTo(punto.x, punto.y);
+                firmaTrazada = true;
+                firmaEstado.textContent = 'Firma capturada.';
+            });
+            firmaCanvas.addEventListener('pointermove', (evento) => {
+                if (!dibujandoFirma) {
+                    return;
+                }
+                evento.preventDefault();
+                const punto = puntoFirma(evento);
+                firmaContexto.lineTo(punto.x, punto.y);
+                firmaContexto.stroke();
+                firmaTrazada = true;
+                firmaEstado.textContent = 'Firma capturada.';
+            });
+            const terminarTrazoFirma = () => {
+                dibujandoFirma = false;
+            };
+            firmaCanvas.addEventListener('pointerup', terminarTrazoFirma);
+            firmaCanvas.addEventListener('pointercancel', terminarTrazoFirma);
+            firmaCanvas.addEventListener('lostpointercapture', terminarTrazoFirma);
+
+            limpiarFirma?.addEventListener('click', () => {
+                firmaContexto.clearRect(0, 0, firmaCanvas.width, firmaCanvas.height);
+                firmaInput.value = '';
+                firmaTrazada = false;
+                firmaEstado.textContent = 'La firma es obligatoria.';
+            });
+
+            reporteForm?.addEventListener('submit', (evento) => {
+                if (!firmaTrazada) {
+                    evento.preventDefault();
+                    firmaEstado.textContent = 'Pide al cliente que firme antes de enviar el reporte.';
+                    firmaCanvas.focus();
+                    return;
+                }
+                firmaInput.value = firmaCanvas.toDataURL('image/png');
+            });
+        }
