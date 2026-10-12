@@ -197,8 +197,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['agregar_equipo'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_orden'])) {
     $equipoId = null;
     $tecnicoId = (int)($_POST['tecnico_id'] ?? 0);
-    $tipoOrden = $_POST['tipo_orden'] ?? 'retiro';
-    $tiposPermitidos = ['retiro', 'instalacion', 'recogida', 'reporte'];
+    $tipoOrden = $_POST['tipo_orden'] ?? 'retirar_equipo';
+    $tiposPermitidos = ['retirar_equipo', 'instalacion', 'cambio_domicilio', 'cambio_contrasena', 'reporte', 'retiro', 'recogida'];
     $clienteNombre = trim($_POST['cliente_nombre'] ?? '');
     $clienteNumero = trim($_POST['cliente_numero'] ?? '');
     $clienteId = (int)($_POST['cliente_id'] ?? 0);

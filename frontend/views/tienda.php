@@ -344,9 +344,10 @@
                         <label>
                             <span>Tipo de orden</span>
                             <select name="tipo_orden" id="tipoOrden" required>
-                                <option value="retiro">Retiro</option>
+                                <option value="retirar_equipo">Retirar equipo</option>
                                 <option value="instalacion">Instalación</option>
-                                <option value="recogida">Recogida</option>
+                                <option value="cambio_domicilio">Cambio de domicilio</option>
+                                <option value="cambio_contrasena">Cambio de contraseña</option>
                                 <option value="reporte">Reporte de cliente</option>
                             </select>
                         </label>
@@ -464,7 +465,7 @@
                         <select name="despacho_orden_id">
                             <option value="0">Sin orden específica</option>
                             <?php foreach ($ordenes as $orden): ?>
-                                <option value="<?php echo (int)$orden['id']; ?>">#<?php echo (int)$orden['id']; ?> · <?php echo htmlspecialchars(ucfirst($orden['tipo_orden'])); ?></option>
+                                <option value="<?php echo (int)$orden['id']; ?>">#<?php echo (int)$orden['id']; ?> · <?php echo htmlspecialchars(str_replace('_', ' ', ucfirst($orden['tipo_orden']))); ?></option>
                             <?php endforeach; ?>
                         </select>
                     </label>
@@ -484,8 +485,9 @@
                         <select id="filtroOrdenes">
                             <option value="todos">Todas las órdenes</option>
                             <option value="instalacion">Instalaciones</option>
-                            <option value="retiro">Retiros</option>
-                            <option value="recogida">Recogidas</option>
+                            <option value="retirar_equipo">Retirar equipo</option>
+                            <option value="cambio_domicilio">Cambio de domicilio</option>
+                            <option value="cambio_contrasena">Cambio de contraseña</option>
                             <option value="reporte">Reportes</option>
                         </select>
                     </label>
@@ -506,7 +508,7 @@
                             <summary class="order-item-head">
                                 <div>
                                     <span class="eyebrow">Orden #<?php echo (int)$orden['id']; ?> · <?php echo htmlspecialchars($orden['tecnico']); ?></span>
-                                    <h4><?php echo htmlspecialchars(ucfirst($orden['tipo_orden'])); ?> · <?php echo htmlspecialchars($orden['cliente_nombre'] ?: 'Sin cliente'); ?></h4>
+                                    <h4><?php echo htmlspecialchars(str_replace('_', ' ', ucfirst($orden['tipo_orden']))); ?> · <?php echo htmlspecialchars($orden['cliente_nombre'] ?: 'Sin cliente'); ?></h4>
                                 </div>
                                 <span class="badge <?php echo badgeClass($orden['estado']); ?>"><?php echo htmlspecialchars($orden['estado']); ?></span>
                             </summary>
@@ -587,7 +589,7 @@
                                 <div class="order-details-content">
                                     <div class="order-facts">
                                         <div><span>Técnico</span><?php echo htmlspecialchars($reporte['tecnico']); ?></div>
-                                        <div><span>Servicio</span><?php echo htmlspecialchars(ucfirst($reporte['tipo_orden'] ?: 'Sin orden')); ?></div>
+                                        <div><span>Servicio</span><?php echo htmlspecialchars(str_replace('_', ' ', ucfirst($reporte['tipo_orden'] ?: 'Sin orden'))); ?></div>
                                         <div><span>Cliente</span><?php echo htmlspecialchars($reporte['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($reporte['cliente_numero'] ?: 'Sin número'); ?></div>
                                         <div><span>Pueblo o ciudad</span><?php echo htmlspecialchars($reporte['ciudad'] ?: 'Sin ciudad'); ?></div>
                                         <div><span>Domicilio</span><?php echo htmlspecialchars($direccionReporte ?: 'Sin domicilio registrado'); ?></div>

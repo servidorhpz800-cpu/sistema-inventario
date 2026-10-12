@@ -39,8 +39,9 @@
                             <select id="filtroOrdenes">
                                 <option value="todos">Todas las órdenes</option>
                                 <option value="instalacion">Instalaciones</option>
-                                <option value="retiro">Retiros</option>
-                                <option value="recogida">Recogidas</option>
+                                <option value="retirar_equipo">Retirar equipo</option>
+                                <option value="cambio_domicilio">Cambio de domicilio</option>
+                                <option value="cambio_contrasena">Cambio de contraseña</option>
                                 <option value="reporte">Reportes</option>
                             </select>
                         </label>
@@ -54,7 +55,7 @@
                                     <div class="order-item-head">
                                         <div>
                                             <span class="eyebrow">Orden #<?php echo (int)$orden['id']; ?></span>
-                                            <h4><?php echo htmlspecialchars(ucfirst($orden['tipo_orden'])); ?></h4>
+                                            <h4><?php echo htmlspecialchars(str_replace('_', ' ', ucfirst($orden['tipo_orden']))); ?></h4>
                                         </div>
                                         <span class="badge <?php echo badgeClass($orden['estado']); ?>"><?php echo htmlspecialchars($orden['estado']); ?></span>
                                     </div>

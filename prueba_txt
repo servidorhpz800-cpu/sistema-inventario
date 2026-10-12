@@ -12,3 +12,8 @@ ALTER TABLE reportes ADD COLUMN IF NOT EXISTS nombre_servicio VARCHAR(150) DEFAU
 ALTER TABLE reportes ADD COLUMN IF NOT EXISTS plan_cliente VARCHAR(150) DEFAULT NULL;
 ALTER TABLE reportes ADD COLUMN IF NOT EXISTS ip_cliente VARCHAR(45) DEFAULT NULL;
 ALTER TABLE reportes ADD COLUMN IF NOT EXISTS firma_cliente VARCHAR(255) DEFAULT NULL;
+
+-- Ajuste de tipos de orden para reflejar las nuevas opciones del flujo de tienda.
+-- Mantiene compatibilidad con valores antiguos (retiro, recogida, revision).
+ALTER TABLE ordenes
+    MODIFY tipo_orden ENUM('retirar_equipo', 'instalacion', 'cambio_domicilio', 'cambio_contrasena', 'reporte', 'retiro', 'recogida', 'revision') NOT NULL;
