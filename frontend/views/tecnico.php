@@ -78,7 +78,7 @@
                                         <input type="hidden" name="orden_id" value="<?php echo (int)$orden['id']; ?>">
                                         <label>
                                             <span>Actualizar estado</span>
-                                            <select name="estado">
+                                            <select name="estado" data-order-status>
                                                 <option value="pendiente" <?php echo $orden['estado'] === 'pendiente' ? 'selected' : ''; ?>>Pendiente</option>
                                                 <option value="en_proceso" <?php echo $orden['estado'] === 'en_proceso' ? 'selected' : ''; ?>>En proceso</option>
                                                 <option value="completado" <?php echo $orden['estado'] === 'completado' ? 'selected' : ''; ?>>Completado</option>
@@ -86,6 +86,12 @@
                                                 <option value="danado" <?php echo $orden['estado'] === 'danado' ? 'selected' : ''; ?>>Dañado</option>
                                             </select>
                                         </label>
+                                        <div class="cancel-reason-field" data-cancel-reason <?php echo $orden['estado'] === 'cancelado' ? '' : 'hidden'; ?>>
+                                            <label>
+                                                <span>Motivo de cancelación</span>
+                                                <textarea name="motivo_cancelacion" maxlength="2000" data-cancel-reason-input><?php echo htmlspecialchars((string)($orden['motivo_cancelacion'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></textarea>
+                                            </label>
+                                        </div>
                                         <button type="submit" name="actualizar_orden" class="btn btn-primary">Guardar estado</button>
                                     </form>
                                     <?php endif; ?>
@@ -114,7 +120,7 @@
                                 <option value="0">Sin equipo específico</option>
                                 <?php foreach ($movimientosTecnico as $movimiento): ?>
                                     <option value="<?php echo (int)$movimiento['id']; ?>" data-cliente-nombre="<?php echo htmlspecialchars($movimiento['cliente_nombre'] ?? '', ENT_QUOTES); ?>" data-cliente-numero="<?php echo htmlspecialchars($movimiento['cliente_numero'] ?? '', ENT_QUOTES); ?>" data-ciudad="<?php echo htmlspecialchars($movimiento['ciudad'] ?? '', ENT_QUOTES); ?>">
-                                        <?php echo htmlspecialchars($movimiento['tipo']); ?> · <?php echo htmlspecialchars($movimiento['marca'] ?: 'Sin marca'); ?> · <?php echo htmlspecialchars($movimiento['serial'] ?: 'Sin serial'); ?> · <?php echo htmlspecialchars($movimiento['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($movimiento['estado']); ?>
+                                        <?php echo htmlspecialchars($movimiento['tipo']); ?> · <?php echo htmlspecialchars($movimiento['marca'] ?: 'Sin marca'); ?> · <?php echo htmlspecialchars($movimiento['serial'] ?: 'Sin serial'); ?> · Asignado a: <?php echo htmlspecialchars($movimiento['tecnico']); ?> · <?php echo htmlspecialchars($movimiento['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($movimiento['estado']); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -209,7 +215,7 @@
                                 <option value="">Seleccione</option>
                                 <?php foreach ($movimientosTecnico as $movimiento): ?>
                                     <option value="<?php echo (int)$movimiento['id']; ?>">
-                                        <?php echo htmlspecialchars($movimiento['tipo']); ?> · <?php echo htmlspecialchars($movimiento['marca'] ?: 'Sin marca'); ?> · Serie: <?php echo htmlspecialchars($movimiento['serial'] ?: 'Sin serie'); ?> · Orden #<?php echo (int)$movimiento['orden_id']; ?> · <?php echo htmlspecialchars($movimiento['estado']); ?>
+                                        <?php echo htmlspecialchars($movimiento['tipo']); ?> · <?php echo htmlspecialchars($movimiento['marca'] ?: 'Sin marca'); ?> · Serie: <?php echo htmlspecialchars($movimiento['serial'] ?: 'Sin serie'); ?> · Asignado a: <?php echo htmlspecialchars($movimiento['tecnico']); ?> · Orden #<?php echo (int)$movimiento['orden_id']; ?> · <?php echo htmlspecialchars($movimiento['estado']); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>

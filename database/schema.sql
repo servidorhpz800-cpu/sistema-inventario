@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS ordenes (
     tipo_orden ENUM('retirar_equipo', 'instalacion', 'cambio_domicilio', 'cambio_contrasena', 'reporte', 'retiro', 'recogida', 'revision') NOT NULL,
     estado ENUM('pendiente', 'en_proceso', 'completado', 'cancelado', 'danado') NOT NULL,
     descripcion TEXT DEFAULT NULL,
+    motivo_cancelacion TEXT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_ordenes_tecnico_estado_created (tecnico_id, estado, created_at),
@@ -154,6 +155,6 @@ INSERT INTO usuarios (usuario, nombre, rol, equipo, password) VALUES
 ('santos', 'Santos', 'tecnico', 'Camioneta Azul', '$2y$10$o5bwekkwMxBymn8RRKKu3uxhQxHY8m.6fqBPst2snE3cy9xGcBSAe'),
 ('jorge', 'Jorge', 'tecnico', 'Camioneta Azul', '$2y$10$LG1oPvYRbfClBV/fIa1vRO6mLkm0gw2CeVZw0g7w2QlUG4sF3IAeO'),
 ('dario', 'Dario', 'tecnico', 'Coche Blanco', '$2y$10$KkUThtk8RX1sbkQqOXSFt.LAHi.hnEwaDpzmQ5jUAn.irW.5D8Xq2'),
-('kevin', 'Kevin', 'tecnico', 'Coche Blanco', '$2y$10$Ck6lDvdCtBC6BZ3P7SkYluFw5wEXK0B3fMTGyfNg3xyEs0TzvbqBW'),
-('joshua', 'Joshua', 'tecnico', NULL, '$2y$10$drRK7JXO1GDl0446xe1LBObBoxAO7euilm9oMZgaxHUIs.Oneaz6i')
+('kevin', 'Kevin', 'tecnico', 'Camioneta Azul', '$2y$10$Ck6lDvdCtBC6BZ3P7SkYluFw5wEXK0B3fMTGyfNg3xyEs0TzvbqBW'),
+('joshua', 'Joshua', 'tecnico', 'Coche Blanco', '$2y$10$drRK7JXO1GDl0446xe1LBObBoxAO7euilm9oMZgaxHUIs.Oneaz6i')
 ON DUPLICATE KEY UPDATE usuario = usuario;

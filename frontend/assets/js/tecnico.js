@@ -6,6 +6,23 @@ const filtroOrdenes = document.getElementById('filtroOrdenes');
                 });
             });
         }
+        document.querySelectorAll('.order-status-form').forEach((form) => {
+            const estadoSelect = form.querySelector('[data-order-status]');
+            const motivoWrapper = form.querySelector('[data-cancel-reason]');
+            const motivoInput = form.querySelector('[data-cancel-reason-input]');
+            if (!estadoSelect || !motivoWrapper || !motivoInput) {
+                return;
+            }
+
+            const actualizarMotivo = () => {
+                const requiereMotivo = estadoSelect.value === 'cancelado';
+                motivoWrapper.hidden = !requiereMotivo;
+                motivoInput.required = requiereMotivo;
+            };
+
+            estadoSelect.addEventListener('change', actualizarMotivo);
+            actualizarMotivo();
+        });
         const capturarUbicacion = document.getElementById('capturarUbicacion');
         if (capturarUbicacion) {
             capturarUbicacion.addEventListener('click', () => {
@@ -102,4 +119,3 @@ const filtroOrdenes = document.getElementById('filtroOrdenes');
         };
         ordenReporteSelect?.addEventListener('change', () => completarClienteReporte(ordenReporteSelect));
         movimientoReporteSelect?.addEventListener('change', () => completarClienteReporte(movimientoReporteSelect));
-

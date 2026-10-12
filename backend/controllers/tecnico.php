@@ -17,17 +17,16 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['actualiz
     $estadosPermitidos = ['portado', 'utilizado', 'no_utilizado', 'falla', 'devuelto'];
 
     if (in_array($estadoEquipo, $estadosPermitidos, true)) {
-        $movimiento = $pdo->prepare('SELECT equipo_id FROM equipos_tecnico WHERE id = :id AND tecnico_id = :tecnico_id LIMIT 1');
-        $movimiento->execute(['id' => $movimientoId, 'tecnico_id' => $tecnicoIdSesion]);
+        $tecnicosEquipo = getTecnicosMismoVehiculo($pdo, $tecnicoIdSesion);
+        $marcadoresTecnicos = implode(', ', array_fill(0, count($tecnicosEquipo), '?'));
+        $movimiento = $pdo->prepare("SELECT equipo_id FROM equipos_tecnico WHERE id = ? AND tecnico_id IN ({$marcadoresTecnicos}) LIMIT 1");
+        $movimiento->execute(array_merge([$movimientoId], $tecnicosEquipo));
         $movimiento = $movimiento->fetch();
 
         if ($movimiento) {
-            $pdo->prepare('UPDATE equipos_tecnico SET estado = :estado, observaciones = :observaciones WHERE id = :id AND tecnico_id = :tecnico_id')->execute([
-                'estado' => $estadoEquipo,
-                'observaciones' => $observaciones,
-                'id' => $movimientoId,
-                'tecnico_id' => $tecnicoIdSesion,
-            ]);
+            $pdo->prepare("UPDATE equipos_tecnico SET estado = ?, observaciones = ? WHERE id = ? AND tecnico_id IN ({$marcadoresTecnicos})")->execute(
+                array_merge([$estadoEquipo, $observaciones, $movimientoId], $tecnicosEquipo)
+            );
 
             $inventarioEstado = 'asignado';
             $condicion = null;
@@ -152,9 +151,11 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
     }
 
     $movimientoReporte = null;
+    $tecnicosEquipoReporte = getTecnicosMismoVehiculo($pdo, $tecnicoIdSesion);
+    $marcadoresTecnicosReporte = implode(', ', array_fill(0, count($tecnicosEquipoReporte), '?'));
     if ($movimientoId > 0) {
-        $movimientoStmt = $pdo->prepare('SELECT id, equipo_id, orden_id, cliente_nombre, cliente_numero FROM equipos_tecnico WHERE id = :id AND tecnico_id = :tecnico_id LIMIT 1');
-        $movimientoStmt->execute(['id' => $movimientoId, 'tecnico_id' => $tecnicoIdSesion]);
+        $movimientoStmt = $pdo->prepare("SELECT id, equipo_id, orden_id, cliente_nombre, cliente_numero FROM equipos_tecnico WHERE id = ? AND tecnico_id IN ({$marcadoresTecnicosReporte}) LIMIT 1");
+        $movimientoStmt->execute(array_merge([$movimientoId], $tecnicosEquipoReporte));
         $movimientoReporte = $movimientoStmt->fetch();
         if (!$movimientoReporte) {
             $mensaje = 'El módem seleccionado no pertenece a tu despacho.';
@@ -170,8 +171,8 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
             $datosOrden = null;
 
                 if ($ordenId !== null) {
-                    $ordenEquipo = $pdo->prepare('SELECT equipo_id, cliente_id, cliente_nombre, cliente_numero, ciudad, tipo_orden FROM ordenes WHERE id = :id AND tecnico_id = :tecnico_id LIMIT 1');
-                    $ordenEquipo->execute(['id' => $ordenId, 'tecnico_id' => $tecnicoIdSesion]);
+                    $ordenEquipo = $pdo->prepare("SELECT equipo_id, cliente_id, cliente_nombre, cliente_numero, ciudad, tipo_orden FROM ordenes WHERE id = ? AND tecnico_id IN ({$marcadoresTecnicosReporte}) LIMIT 1");
+                    $ordenEquipo->execute(array_merge([$ordenId], $tecnicosEquipoReporte));
                     $datosOrden = $ordenEquipo->fetch();
                     if (!$datosOrden) {
                         throw new RuntimeException('La orden no pertenece al técnico actual.');
@@ -208,31 +209,16 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
             }
 
             if ($ordenId !== null && $datosOrden['tipo_orden'] === 'instalacion') {
-                $ordenClienteUpdate = $pdo->prepare('UPDATE ordenes SET cliente_nombre = :cliente_nombre, cliente_numero = :cliente_numero WHERE id = :id AND tecnico_id = :tecnico_id');
-                $ordenClienteUpdate->execute([
-                    'cliente_nombre' => $clienteNombreReporte,
-                    'cliente_numero' => $clienteNumeroReporte,
-                    'id' => $ordenId,
-                    'tecnico_id' => $tecnicoIdSesion,
-                ]);
+                $ordenClienteUpdate = $pdo->prepare("UPDATE ordenes SET cliente_nombre = ?, cliente_numero = ? WHERE id = ? AND tecnico_id IN ({$marcadoresTecnicosReporte})");
+                $ordenClienteUpdate->execute(array_merge([$clienteNombreReporte, $clienteNumeroReporte, $ordenId], $tecnicosEquipoReporte));
 
-                $movimientosClienteUpdate = $pdo->prepare('UPDATE equipos_tecnico SET cliente_nombre = :cliente_nombre, cliente_numero = :cliente_numero WHERE orden_id = :orden_id AND tecnico_id = :tecnico_id');
-                $movimientosClienteUpdate->execute([
-                    'cliente_nombre' => $clienteNombreReporte,
-                    'cliente_numero' => $clienteNumeroReporte,
-                    'orden_id' => $ordenId,
-                    'tecnico_id' => $tecnicoIdSesion,
-                ]);
+                $movimientosClienteUpdate = $pdo->prepare("UPDATE equipos_tecnico SET cliente_nombre = ?, cliente_numero = ? WHERE orden_id = ? AND tecnico_id IN ({$marcadoresTecnicosReporte})");
+                $movimientosClienteUpdate->execute(array_merge([$clienteNombreReporte, $clienteNumeroReporte, $ordenId], $tecnicosEquipoReporte));
             }
 
             if ($ordenId !== null) {
-                $ordenUbicacionUpdate = $pdo->prepare('UPDATE ordenes SET ciudad = :ciudad, ubicacion_url = COALESCE(:ubicacion_url, ubicacion_url) WHERE id = :id AND tecnico_id = :tecnico_id');
-                $ordenUbicacionUpdate->execute([
-                    'ciudad' => $ciudadReporte,
-                    'ubicacion_url' => $ubicacionUrlReporte,
-                    'id' => $ordenId,
-                    'tecnico_id' => $tecnicoIdSesion,
-                ]);
+                $ordenUbicacionUpdate = $pdo->prepare("UPDATE ordenes SET ciudad = ?, ubicacion_url = COALESCE(?, ubicacion_url) WHERE id = ? AND tecnico_id IN ({$marcadoresTecnicosReporte})");
+                $ordenUbicacionUpdate->execute(array_merge([$ciudadReporte, $ubicacionUrlReporte, $ordenId], $tecnicosEquipoReporte));
             }
 
             if ($clienteIdReporte > 0) {
@@ -297,13 +283,8 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
 
             if ($movimientoReporte) {
                 $estadoMovimiento = $estadoEquipo === 'normal' ? 'utilizado' : 'falla';
-                $movimientoUpdate = $pdo->prepare('UPDATE equipos_tecnico SET estado = :estado, observaciones = :observaciones WHERE id = :id AND tecnico_id = :tecnico_id');
-                $movimientoUpdate->execute([
-                    'estado' => $estadoMovimiento,
-                    'observaciones' => $descripcion,
-                    'id' => $movimientoId,
-                    'tecnico_id' => $tecnicoIdSesion,
-                ]);
+                $movimientoUpdate = $pdo->prepare("UPDATE equipos_tecnico SET estado = ?, observaciones = ? WHERE id = ? AND tecnico_id IN ({$marcadoresTecnicosReporte})");
+                $movimientoUpdate->execute(array_merge([$estadoMovimiento, $descripcion, $movimientoId], $tecnicosEquipoReporte));
             }
 
             if ($equipoIdActualizado > 0) {
@@ -346,14 +327,48 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
 
 if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['actualizar_orden'])) {
     $ordenId = (int)($_POST['orden_id'] ?? 0);
-    $estado = $_POST['estado'] ?? 'completado';
-    $pdo->prepare('UPDATE ordenes SET estado = :estado WHERE id = :id AND tecnico_id = :tecnico_id')->execute([
-        'estado' => $estado,
-        'id' => $ordenId,
-        'tecnico_id' => (int)$_SESSION['usuario_id'],
-    ]);
-    registrarActividad($pdo, 'Técnico', 'Actualizar orden', 'orden', $ordenId, "Orden actualizada a estado {$estado}.");
-    $mensaje = 'Estado de la orden actualizado.';
+    $estado = (string)($_POST['estado'] ?? '');
+    $motivoCancelacion = trim((string)($_POST['motivo_cancelacion'] ?? ''));
+    $estadosPermitidos = ['pendiente', 'en_proceso', 'completado', 'cancelado', 'danado'];
+
+    if (!in_array($estado, $estadosPermitidos, true)) {
+        $mensaje = 'El estado seleccionado no es válido.';
+        $tipoMensaje = 'danger';
+    } elseif ($estado === 'cancelado' && $motivoCancelacion === '') {
+        $mensaje = 'Escribe el motivo para poder cancelar la orden.';
+        $tipoMensaje = 'danger';
+    } elseif (preg_match_all('/./us', $motivoCancelacion, $motivoCaracteres) === false || count($motivoCaracteres[0]) > 2000) {
+        $mensaje = 'El motivo de cancelación no puede exceder 2000 caracteres.';
+        $tipoMensaje = 'danger';
+    } else {
+        $ordenStmt = $pdo->prepare('SELECT id FROM ordenes WHERE id = :id AND tecnico_id = :tecnico_id LIMIT 1');
+        $ordenStmt->execute(['id' => $ordenId, 'tecnico_id' => $tecnicoIdSesion]);
+        if (!$ordenStmt->fetchColumn()) {
+            $mensaje = 'No se encontró la orden asignada.';
+            $tipoMensaje = 'danger';
+        } else {
+            if ($estado === 'cancelado') {
+                $pdo->prepare('UPDATE ordenes SET estado = :estado, motivo_cancelacion = :motivo_cancelacion WHERE id = :id AND tecnico_id = :tecnico_id')->execute([
+                    'estado' => $estado,
+                    'motivo_cancelacion' => $motivoCancelacion,
+                    'id' => $ordenId,
+                    'tecnico_id' => $tecnicoIdSesion,
+                ]);
+            } else {
+                $pdo->prepare('UPDATE ordenes SET estado = :estado WHERE id = :id AND tecnico_id = :tecnico_id')->execute([
+                    'estado' => $estado,
+                    'id' => $ordenId,
+                    'tecnico_id' => $tecnicoIdSesion,
+                ]);
+            }
+            $detalle = "Orden actualizada a estado {$estado}.";
+            if ($estado === 'cancelado') {
+                $detalle .= " Motivo: {$motivoCancelacion}";
+            }
+            registrarActividad($pdo, 'Técnico', 'Actualizar orden', 'orden', $ordenId, $detalle);
+            $mensaje = 'Estado de la orden actualizado.';
+        }
+    }
 }
 
 manejarPostRedirectGet($mensaje, $tipoMensaje);

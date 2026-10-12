@@ -17,3 +17,11 @@ ALTER TABLE reportes ADD COLUMN IF NOT EXISTS firma_cliente VARCHAR(255) DEFAULT
 -- Mantiene compatibilidad con valores antiguos (retiro, recogida, revision).
 ALTER TABLE ordenes
     MODIFY tipo_orden ENUM('retirar_equipo', 'instalacion', 'cambio_domicilio', 'cambio_contrasena', 'reporte', 'retiro', 'recogida', 'revision') NOT NULL;
+
+-- Agrega el motivo obligatorio de cancelación a las órdenes.
+ALTER TABLE ordenes
+    ADD COLUMN IF NOT EXISTS motivo_cancelacion TEXT DEFAULT NULL AFTER descripcion;
+
+-- Equipos de técnicos que comparten el inventario de módems por vehículo.
+UPDATE usuarios SET equipo = 'Coche Blanco' WHERE usuario IN ('dario', 'joshua') AND rol = 'tecnico';
+UPDATE usuarios SET equipo = 'Camioneta Azul' WHERE usuario IN ('kevin', 'jorge') AND rol = 'tecnico';

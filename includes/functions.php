@@ -244,6 +244,24 @@ function getEquiposTecnico(PDO $pdo, ?int $tecnicoId = null): array
     return $stmt->fetchAll();
 }
 
+function getTecnicosMismoVehiculo(PDO $pdo, int $tecnicoId): array
+{
+    $stmt = $pdo->prepare("SELECT companero.id
+        FROM usuarios actual
+        JOIN usuarios companero
+            ON TRIM(companero.equipo) = TRIM(actual.equipo)
+            AND companero.rol = 'tecnico'
+            AND companero.activo = 1
+        WHERE actual.id = :tecnicoId
+            AND actual.rol = 'tecnico'
+            AND actual.equipo IS NOT NULL
+            AND TRIM(actual.equipo) <> ''");
+    $stmt->execute(['tecnicoId' => $tecnicoId]);
+    $tecnicos = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+    $tecnicos[] = $tecnicoId;
+    return array_values(array_unique($tecnicos));
+}
+
 function getMovimientosTecnico(PDO $pdo, ?int $tecnicoId = null): array
 {
     $sql = "SELECT et.*, e.tipo, e.marca, e.modelo, e.serial, o.tipo_orden,
@@ -256,11 +274,12 @@ function getMovimientosTecnico(PDO $pdo, ?int $tecnicoId = null): array
         LEFT JOIN ordenes o ON o.id = et.orden_id
         JOIN usuarios u ON u.id = et.tecnico_id";
     if ($tecnicoId !== null) {
-        $sql .= ' WHERE et.tecnico_id = :tecnicoId';
+        $tecnicosEquipo = getTecnicosMismoVehiculo($pdo, $tecnicoId);
+        $sql .= ' WHERE et.tecnico_id IN (' . implode(', ', array_fill(0, count($tecnicosEquipo), '?')) . ')';
     }
     $stmt = $pdo->prepare($sql . ' ORDER BY et.updated_at DESC');
     if ($tecnicoId !== null) {
-        $stmt->execute(['tecnicoId' => $tecnicoId]);
+        $stmt->execute($tecnicosEquipo);
     } else {
         $stmt->execute();
     }
