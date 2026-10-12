@@ -25,21 +25,115 @@ const filtroOrdenes = document.getElementById('filtroOrdenes');
         });
         const capturarUbicacion = document.getElementById('capturarUbicacion');
         if (capturarUbicacion) {
+            const estadoUbicacion = document.getElementById('estadoUbicacionReporte');
+            const latitudReporte = document.getElementById('latitudReporte');
+            const longitudReporte = document.getElementById('longitudReporte');
+            const precisionObjetivoMetros = 10;
+            const tiempoMaximoCapturaMs = 45000;
+
             capturarUbicacion.addEventListener('click', () => {
                 if (!navigator.geolocation) {
-                    alert('Este navegador no permite capturar ubicación.');
+                    if (estadoUbicacion) {
+                        estadoUbicacion.textContent = 'Este navegador no permite capturar ubicación.';
+                    }
                     return;
                 }
+
                 capturarUbicacion.disabled = true;
-                navigator.geolocation.getCurrentPosition((position) => {
-                    document.getElementById('latitudReporte').value = position.coords.latitude.toFixed(7);
-                    document.getElementById('longitudReporte').value = position.coords.longitude.toFixed(7);
-                    capturarUbicacion.textContent = 'Ubicación capturada';
+                capturarUbicacion.textContent = 'Buscando señal GPS...';
+                if (estadoUbicacion) {
+                    estadoUbicacion.textContent = 'Mantén el teléfono quieto y espera a que mejore la precisión.';
+                }
+
+                let mejorPosicion = null;
+                let capturaFinalizada = false;
+                let mensajeSinPosicion = 'No se obtuvo una posición GPS. Revisa el permiso de ubicación e inténtalo al aire libre.';
+                let relojCaptura;
+                let watchId;
+
+                const finalizarCaptura = () => {
+                    if (capturaFinalizada) {
+                        return;
+                    }
+                    capturaFinalizada = true;
+                    window.clearTimeout(relojCaptura);
+                    if (watchId !== undefined) {
+                        navigator.geolocation.clearWatch(watchId);
+                    }
                     capturarUbicacion.disabled = false;
-                }, () => {
-                    alert('No fue posible obtener la ubicación. Revisa el permiso del navegador.');
-                    capturarUbicacion.disabled = false;
-                }, { enableHighAccuracy: true, timeout: 10000 });
+                    capturarUbicacion.textContent = 'Capturar ubicación actual';
+
+                    if (!mejorPosicion) {
+                        if (estadoUbicacion) {
+                            estadoUbicacion.textContent = mensajeSinPosicion;
+                        }
+                        return;
+                    }
+
+                    const precision = mejorPosicion.coords.accuracy.toFixed(1);
+                    if (mejorPosicion.coords.accuracy > precisionObjetivoMetros) {
+                        if (estadoUbicacion) {
+                            estadoUbicacion.textContent = `No se guardó esta lectura: su precisión es ±${precision} m y se requiere ±${precisionObjetivoMetros} m o mejor. Inténtalo al aire libre con el GPS activado.`;
+                        }
+                        return;
+                    }
+
+                    latitudReporte.value = mejorPosicion.coords.latitude.toFixed(7);
+                    longitudReporte.value = mejorPosicion.coords.longitude.toFixed(7);
+                    if (estadoUbicacion) {
+                        estadoUbicacion.textContent = `Ubicación capturada. Precisión aproximada: ±${precision} m.`;
+                    }
+                };
+
+                try {
+                    relojCaptura = window.setTimeout(finalizarCaptura, tiempoMaximoCapturaMs);
+                    watchId = navigator.geolocation.watchPosition((position) => {
+                        if (capturaFinalizada) {
+                            return;
+                        }
+                        const { latitude, longitude, accuracy } = position.coords;
+                        if (
+                            !Number.isFinite(latitude)
+                            || latitude < -90
+                            || latitude > 90
+                            || !Number.isFinite(longitude)
+                            || longitude < -180
+                            || longitude > 180
+                            || !Number.isFinite(accuracy)
+                            || accuracy < 0
+                        ) {
+                            return;
+                        }
+
+                        if (!mejorPosicion || accuracy < mejorPosicion.coords.accuracy) {
+                            mejorPosicion = position;
+                            if (estadoUbicacion) {
+                                estadoUbicacion.textContent = `Señal GPS recibida. Precisión actual: ±${accuracy.toFixed(1)} m; buscando mejorarla...`;
+                            }
+                        }
+
+                        if (accuracy <= precisionObjetivoMetros) {
+                            finalizarCaptura();
+                        }
+                    }, (error) => {
+                        if (capturaFinalizada) {
+                            return;
+                        }
+                        if (error.code === error.PERMISSION_DENIED) {
+                            mensajeSinPosicion = 'No hay permiso de ubicación. Autorízalo en el navegador y vuelve a intentarlo.';
+                            finalizarCaptura();
+                            return;
+                        }
+
+                        if (estadoUbicacion) {
+                            estadoUbicacion.textContent = 'Aún no se obtiene señal GPS; espera un momento o inténtalo en un lugar abierto.';
+                        }
+                    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
+                } catch (error) {
+                    mensajeSinPosicion = 'No se pudo iniciar el GPS. Revisa que la página use HTTPS y vuelve a intentarlo.';
+                    finalizarCaptura();
+                    console.error('No se pudo iniciar la captura de ubicación:', error);
+                }
             });
         }
         const ordenReporteSelect = document.querySelector('#reporteTecnicoForm select[name="orden_id"]');
