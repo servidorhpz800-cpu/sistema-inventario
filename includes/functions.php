@@ -321,3 +321,6 @@ function badgeClass(string $estado): string
 
     return $map[$estado] ?? 'secondary';
 }
+
+
+// -- probando 123
