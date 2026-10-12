@@ -74,8 +74,6 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
     $nombreServicio = trim($_POST['nombre_servicio'] ?? '');
     $planCliente = trim($_POST['plan_cliente'] ?? '');
     $ipCliente = trim($_POST['ip_cliente'] ?? '');
-    $firmaData = trim((string)($_POST['firma_cliente'] ?? ''));
-    $firmaBinaria = null;
     $total = null;
     $saldo = null;
     $clienteNombreReporte = trim($_POST['cliente_nombre'] ?? '');
@@ -121,37 +119,10 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
         $mensaje = 'La dirección IP no es válida.';
         $tipoMensaje = 'danger';
     }
-    if ($firmaData === '') {
-        $mensaje = 'El cliente debe firmar en la pantalla antes de enviar el reporte.';
-        $tipoMensaje = 'danger';
-    } elseif (preg_match('/\Adata:image\/png;base64,([A-Za-z0-9+\/=]+)\z/', $firmaData, $firmaCoincidencias) !== 1) {
-        $mensaje = 'La firma no tiene un formato válido. Vuelve a firmar e inténtalo de nuevo.';
-        $tipoMensaje = 'danger';
-    } else {
-        $firmaBinaria = strlen($firmaCoincidencias[1]) <= 1398104
-            ? base64_decode($firmaCoincidencias[1], true)
-            : false;
-        $datosImagenFirma = $firmaBinaria !== false ? @getimagesizefromstring($firmaBinaria) : false;
-        if (
-            $firmaBinaria === false
-            || strlen($firmaBinaria) > 1048576
-            || $datosImagenFirma === false
-            || $datosImagenFirma['mime'] !== 'image/png'
-            || $datosImagenFirma[0] < 1
-            || $datosImagenFirma[0] > 1200
-            || $datosImagenFirma[1] < 1
-            || $datosImagenFirma[1] > 400
-        ) {
-            $firmaBinaria = null;
-            $mensaje = 'No se pudo validar la firma. Vuelve a firmar e inténtalo de nuevo.';
-            $tipoMensaje = 'danger';
-        }
-    }
     $fotoUrl = null;
     $fotosTemporales = [];
     $fotosGuardadas = [];
     $directorioFotos = null;
-    $firmaGuardada = null;
 
     $subidaFotos = $_FILES['foto_reporte'] ?? null;
     if ($subidaFotos !== null) {
@@ -278,7 +249,7 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
                 : ($equipoDeOrden !== null ? (int)$equipoDeOrden : null);
 
             $directorioFotos = getReportesUploadDirectory();
-            if (($fotosTemporales || $firmaBinaria !== null) && !is_dir($directorioFotos) && !mkdir($directorioFotos, 0755, true) && !is_dir($directorioFotos)) {
+            if ($fotosTemporales && !is_dir($directorioFotos) && !mkdir($directorioFotos, 0755, true) && !is_dir($directorioFotos)) {
                 throw new RuntimeException('No se pudo crear el directorio de evidencias.');
             }
             foreach ($fotosTemporales as $fotoTemporal) {
@@ -290,13 +261,7 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
             }
             $fotoUrl = $fotosGuardadas[0] ?? null;
 
-            $firmaGuardada = 'firma-' . bin2hex(random_bytes(16)) . '.png';
-            $bytesFirma = file_put_contents($directorioFotos . DIRECTORY_SEPARATOR . $firmaGuardada, $firmaBinaria, LOCK_EX);
-            if ($bytesFirma === false || $bytesFirma !== strlen($firmaBinaria)) {
-                throw new RuntimeException('No se pudo guardar la firma del cliente.');
-            }
-
-            $stmt = $pdo->prepare('INSERT INTO reportes (tecnico_id, orden_id, equipo_id, movimiento_id, cliente_nombre, cliente_numero, ciudad, domicilio_calles, total, saldo, nombre_servicio, plan_cliente, ip_cliente, firma_cliente, actividad_realizada, materiales, resultado, descripcion, latitud, longitud, foto_url, estado) VALUES (:tecnico_id, :orden_id, :equipo_id, :movimiento_id, :cliente_nombre, :cliente_numero, :ciudad, :domicilio_calles, :total, :saldo, :nombre_servicio, :plan_cliente, :ip_cliente, :firma_cliente, :actividad_realizada, :materiales, :resultado, :descripcion, :latitud, :longitud, :foto_url, :estado)');
+            $stmt = $pdo->prepare('INSERT INTO reportes (tecnico_id, orden_id, equipo_id, movimiento_id, cliente_nombre, cliente_numero, ciudad, domicilio_calles, total, saldo, nombre_servicio, plan_cliente, ip_cliente, actividad_realizada, materiales, resultado, descripcion, latitud, longitud, foto_url, estado) VALUES (:tecnico_id, :orden_id, :equipo_id, :movimiento_id, :cliente_nombre, :cliente_numero, :ciudad, :domicilio_calles, :total, :saldo, :nombre_servicio, :plan_cliente, :ip_cliente, :actividad_realizada, :materiales, :resultado, :descripcion, :latitud, :longitud, :foto_url, :estado)');
             $stmt->execute([
                 'tecnico_id' => $tecnicoIdSesion,
                 'orden_id' => $ordenId,
@@ -311,7 +276,6 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
                 'nombre_servicio' => $nombreServicio !== '' ? $nombreServicio : null,
                 'plan_cliente' => $planCliente !== '' ? $planCliente : null,
                 'ip_cliente' => $ipCliente !== '' ? $ipCliente : null,
-                'firma_cliente' => $firmaGuardada,
                 'actividad_realizada' => $actividad,
                 'materiales' => $materiales,
                 'resultado' => $resultado,

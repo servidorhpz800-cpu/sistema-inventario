@@ -185,16 +185,6 @@
                         <input type="hidden" name="longitud" id="longitudReporte">
                         <button type="button" id="capturarUbicacion" class="btn btn-secondary">Capturar ubicación actual</button>
                         <p class="form-note">Al enviar el reporte, la ciudad y la ubicación GPS se guardarán en el cliente para facilitar próximas visitas.</p>
-                        <div class="signature-field">
-                            <label for="firmaClienteCanvas">Firma del cliente</label>
-                            <p class="form-note">Pide al cliente que firme aquí con el dedo o el lápiz del teléfono.</p>
-                            <canvas id="firmaClienteCanvas" width="900" height="270" tabindex="0" aria-label="Área para la firma del cliente"></canvas>
-                            <input type="hidden" name="firma_cliente" id="firmaClienteInput">
-                            <div class="signature-actions">
-                                <span id="firmaClienteEstado" class="form-note" aria-live="polite">La firma es obligatoria.</span>
-                                <button type="button" id="limpiarFirmaCliente" class="btn btn-secondary">Borrar firma</button>
-                            </div>
-                        </div>
                         <button type="submit" name="guardar_reporte" class="btn btn-success">Enviar reporte</button>
                     </form>
                 </div>
@@ -298,7 +288,6 @@
                                     <td><?php echo htmlspecialchars($reporte['descripcion']); ?></td>
                                     <td>
                                         <?php foreach ($reporte['fotos'] as $indiceFoto => $foto): ?><?php $urlFoto = urlEvidenciaReporte((string)$foto); ?><?php if ($urlFoto !== ''): ?><a href="<?php echo htmlspecialchars($urlFoto, ENT_QUOTES); ?>" target="_blank" rel="noopener">Ver imagen <?php echo (int)($indiceFoto + 1); ?></a><br><?php endif; ?><?php endforeach; ?>
-                                        <?php $urlFirmaCliente = !empty($reporte['firma_cliente']) ? urlEvidenciaReporte((string)$reporte['firma_cliente']) : ''; ?><?php if ($urlFirmaCliente !== ''): ?><a href="<?php echo htmlspecialchars($urlFirmaCliente, ENT_QUOTES); ?>" target="_blank" rel="noopener">Ver firma del cliente</a><br><?php endif; ?>
                                         <?php if ($reporte['latitud'] !== null && $reporte['longitud'] !== null): ?><a href="https://www.google.com/maps?q=<?php echo urlencode($reporte['latitud'] . ',' . $reporte['longitud']); ?>" target="_blank" rel="noopener">Ver ubicación</a><?php endif; ?>
                                     </td>
                                     <td><?php echo htmlspecialchars(date('d/m/Y H:i', strtotime($reporte['created_at']))); ?></td>

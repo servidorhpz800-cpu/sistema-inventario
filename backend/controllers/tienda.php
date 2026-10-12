@@ -403,7 +403,7 @@ if (in_array($tipoExportacion, ['equipos', 'reportes', 'instalaciones', 'cliente
             }
             break;
         case 'reportes':
-            $encabezadosExportacion = ['ID', 'Fecha', 'Técnico', 'Orden', 'Tipo de orden', 'Estado reporte', 'Cliente', 'Teléfono', 'Pueblo o ciudad', 'Equipo', 'Marca', 'Modelo', 'Serial', 'Domicilio o calles', 'Total', 'Saldo', 'Nombre del servicio', 'Plan del cliente', 'Dirección IP', 'Actividad', 'Materiales', 'Resultado', 'Descripción', 'Latitud', 'Longitud', 'Evidencias', 'Firma del cliente'];
+            $encabezadosExportacion = ['ID', 'Fecha', 'Técnico', 'Orden', 'Tipo de orden', 'Estado reporte', 'Cliente', 'Teléfono', 'Pueblo o ciudad', 'Equipo', 'Marca', 'Modelo', 'Serial', 'Domicilio o calles', 'Total', 'Saldo', 'Nombre del servicio', 'Plan del cliente', 'Dirección IP', 'Actividad', 'Materiales', 'Resultado', 'Descripción', 'Latitud', 'Longitud', 'Evidencias'];
             foreach ($reportes as $reporte) {
                 $filasExportacion[] = [
                     $reporte['id'], $reporte['created_at'], $reporte['tecnico'], $reporte['orden_id'], $reporte['tipo_orden'],
@@ -412,7 +412,6 @@ if (in_array($tipoExportacion, ['equipos', 'reportes', 'instalaciones', 'cliente
                     $reporte['total'], $reporte['saldo'], $reporte['nombre_servicio'], $reporte['plan_cliente'], $reporte['ip_cliente'],
                     $reporte['actividad_realizada'], $reporte['materiales'], $reporte['resultado'], $reporte['descripcion'],
                     $reporte['latitud'], $reporte['longitud'], implode(' | ', array_map('urlEvidenciaReporte', $reporte['fotos'])),
-                    $reporte['firma_cliente'] ? urlEvidenciaReporte($reporte['firma_cliente']) : '',
                 ];
             }
             break;

@@ -602,7 +602,6 @@
                                     <?php if (!empty($reporte['materiales'])): ?><p class="order-description"><strong>Materiales:</strong> <?php echo htmlspecialchars($reporte['materiales']); ?></p><?php endif; ?>
                                     <div class="inline-actions">
                                         <?php foreach ($reporte['fotos'] as $indiceFoto => $foto): ?><?php $urlFoto = urlEvidenciaReporte((string)$foto); ?><?php if ($urlFoto !== ''): ?><a href="<?php echo htmlspecialchars($urlFoto, ENT_QUOTES); ?>" target="_blank" rel="noopener" class="btn btn-secondary">Ver imagen <?php echo (int)($indiceFoto + 1); ?></a><?php endif; ?><?php endforeach; ?>
-                                        <?php $urlFirmaCliente = !empty($reporte['firma_cliente']) ? urlEvidenciaReporte((string)$reporte['firma_cliente']) : ''; ?><?php if ($urlFirmaCliente !== ''): ?><a href="<?php echo htmlspecialchars($urlFirmaCliente, ENT_QUOTES); ?>" target="_blank" rel="noopener" class="btn btn-secondary">Ver firma del cliente</a><?php endif; ?>
                                         <?php if ($urlMapaReporte !== ''): ?><a href="<?php echo htmlspecialchars($urlMapaReporte, ENT_QUOTES); ?>" target="_blank" rel="noopener" class="btn btn-secondary">Ver ubicación</a><?php endif; ?>
                                     </div>
                                 </div>

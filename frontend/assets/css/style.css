@@ -889,36 +889,6 @@ textarea {
     margin-left: auto;
 }
 
-.signature-field {
-    display: grid;
-    gap: 8px;
-}
-
-.signature-field > label {
-    font-weight: 700;
-}
-
-.signature-field > .form-note {
-    margin: 0;
-}
-
-#firmaClienteCanvas {
-    display: block;
-    width: 100%;
-    height: 180px;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    background: #fff;
-    touch-action: none;
-}
-
-.signature-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-}
-
 @media (max-width: 900px) {
     .topbar {
         justify-content: center;
