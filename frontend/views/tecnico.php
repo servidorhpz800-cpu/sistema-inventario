@@ -244,10 +244,11 @@
                             <div class="order-item-head">
                                 <div>
                                     <span class="eyebrow">Orden #<?php echo (int)$movimiento['orden_id']; ?></span>
-                                    <h4><?php echo htmlspecialchars($movimiento['tipo']); ?><?php echo $movimiento['marca'] ? ' · ' . htmlspecialchars($movimiento['marca']) : ''; ?></h4>
+                                    <h4><?php echo htmlspecialchars($movimiento['tipo']); ?></h4>
                                 </div>
                                 <span class="badge <?php echo badgeClass($movimiento['estado']); ?>"><?php echo htmlspecialchars(str_replace('_', ' ', $movimiento['estado'])); ?></span>
                             </div>
+                            <p class="order-description"><strong>Marca:</strong> <?php echo htmlspecialchars($movimiento['marca'] ?: 'Sin marca'); ?> · <strong>Número de serie:</strong> <?php echo htmlspecialchars($movimiento['serial'] ?: 'Sin número de serie'); ?></p>
                             <p class="order-description"><strong>Cliente:</strong> <?php echo htmlspecialchars($movimiento['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($movimiento['cliente_numero'] ?: 'Sin número'); ?></p>
                             <p class="order-description"><?php echo htmlspecialchars($movimiento['observaciones'] ?: 'Sin observaciones'); ?></p>
                         </article>
