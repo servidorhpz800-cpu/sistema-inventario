@@ -85,6 +85,7 @@ Si ejecutas más de un servidor web, la ruta debe apuntar a almacenamiento compa
 - Importar módems al stock desde CSV y exportar inventario, reportes, instalaciones y clientes desde Tienda
 - Estados: nuevo, medio uso, recogido, dañados, no sirven
 - Despacho de equipos a técnicos
+- Recepción rápida de equipos devueltos por técnicos, con opción de alta en stock o baja
 - Seguimiento de órdenes
 - Directorio de clientes con domicilios, búsqueda y reutilización al crear órdenes
 - Reportes técnicos
@@ -114,7 +115,7 @@ Si ejecutas más de un servidor web, la ruta debe apuntar a almacenamiento compa
 
 Mantén respaldos regulares de MySQL y de `uploads/reportes`. Las operaciones de esquema son manuales y deben ejecutarse antes de desplegar una versión que requiera nuevas columnas o tablas.
 
-En **Tienda > Operación**, las exportaciones CSV incluyen inventario, reportes, instalaciones y clientes. La exportación de reportes e instalaciones respeta la vista diaria o el archivo seleccionado. Al elegir un cliente existente al crear una orden, se llenan sus datos y se reutiliza la ubicación guardada; si no tiene enlace en su ficha, se recuperan las coordenadas GPS de su reporte más reciente. Para importar módems, descarga la plantilla CSV, completa el serial de cada equipo y cárgala desde la misma sección. Se aceptan archivos separados por coma o punto y coma, de hasta 5 MB y 5,000 equipos; los seriales ya registrados se omiten y los equipos nuevos quedan disponibles en Tienda.
+En **Tienda > Operación**, los equipos que siguen asignados a técnicos aparecen en **Equipos que regresan de técnicos**. Tienda puede recibirlos y elegir si darlos de alta nuevamente en el stock o darlos de baja. Si el técnico marca el equipo como no utilizado o devuelto a Tienda, el inventario vuelve directamente al stock y el equipo deja de aparecer entre sus equipos activos. Las exportaciones CSV incluyen inventario, reportes, instalaciones y clientes. La exportación de reportes e instalaciones respeta la vista diaria o el archivo seleccionado. Al elegir un cliente existente al crear una orden, se llenan sus datos y se reutiliza la ubicación guardada; si no tiene enlace en su ficha, se recuperan las coordenadas GPS de su reporte más reciente. Para importar módems, descarga la plantilla CSV, completa el serial de cada equipo y cárgala desde la misma sección. Se aceptan archivos separados por coma o punto y coma, de hasta 5 MB y 5,000 equipos; los seriales ya registrados se omiten y los equipos nuevos quedan disponibles en Tienda.
 
 En **Admin > Reportes** y **Tienda > Operación**, el resumen muestra la cantidad histórica de reportes por cliente y el conteo por técnico; los filtros también permiten revisar el detalle visible. Al registrar un equipo, conecta un lector USB tipo teclado y escanea el serial en su campo. Se reconocen los prefijos `48575443` (Huawei), `TPLK` (TP-Link), `HWTC` (Telmex), `ALCL` (Nokia) y `V23`, `VSOL` o `GPON` (V-SOL). La detección completa automáticamente el fabricante y el tipo GPON cuando está disponible; los campos se pueden corregir manualmente.
 

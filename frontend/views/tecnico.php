@@ -118,7 +118,7 @@
                             <span>Módem/equipo utilizado o revisado (opcional)</span>
                             <select name="movimiento_reporte_id">
                                 <option value="0">Sin equipo específico</option>
-                                <?php foreach ($movimientosTecnico as $movimiento): ?>
+                                <?php foreach ($movimientosTecnicoParaReporte as $movimiento): ?>
                                     <option value="<?php echo (int)$movimiento['id']; ?>" data-cliente-nombre="<?php echo htmlspecialchars($movimiento['cliente_nombre'] ?? '', ENT_QUOTES); ?>" data-cliente-numero="<?php echo htmlspecialchars($movimiento['cliente_numero'] ?? '', ENT_QUOTES); ?>" data-ciudad="<?php echo htmlspecialchars($movimiento['ciudad'] ?? '', ENT_QUOTES); ?>">
                                         <?php echo htmlspecialchars($movimiento['tipo']); ?> · <?php echo htmlspecialchars($movimiento['marca'] ?: 'Sin marca'); ?> · <?php echo htmlspecialchars($movimiento['serial'] ?: 'Sin serial'); ?> · Asignado a: <?php echo htmlspecialchars($movimiento['tecnico']); ?> · <?php echo htmlspecialchars($movimiento['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($movimiento['estado']); ?>
                                     </option>
@@ -217,13 +217,13 @@
                         </div>
                         <span class="step-number">02</span>
                     </div>
-                    <p class="form-note">Estos equipos ya fueron asignados por Tienda. Indica si se usaron, devolvieron o presentaron una falla.</p>
+                    <p class="form-note">Estos son los equipos que todavía tienes asignados. Al marcar “No utilizado” o “Devuelto a tienda”, el equipo vuelve al stock y deja de aparecer en tu lista.</p>
                     <form method="POST">
                         <label>
                             <span>Equipo registrado</span>
                             <select name="movimiento_id" required>
                                 <option value="">Seleccione</option>
-                                <?php foreach ($movimientosTecnico as $movimiento): ?>
+                                <?php foreach ($movimientosTecnicoActivos as $movimiento): ?>
                                     <option value="<?php echo (int)$movimiento['id']; ?>">
                                         <?php echo htmlspecialchars($movimiento['tipo']); ?> · <?php echo htmlspecialchars($movimiento['marca'] ?: 'Sin marca'); ?> · Serie: <?php echo htmlspecialchars($movimiento['serial'] ?: 'Sin serie'); ?> · Asignado a: <?php echo htmlspecialchars($movimiento['tecnico']); ?> · Orden #<?php echo (int)$movimiento['orden_id']; ?> · <?php echo htmlspecialchars($movimiento['estado']); ?>
                                     </option>
@@ -252,14 +252,18 @@
             <div class="card equipment-history stacked-panel">
                 <div class="orders-toolbar">
                     <h3>Historial de equipos portados</h3>
-                    <span class="badge info"><?php echo count($movimientosTecnico); ?> registros</span>
+                    <span class="badge info"><?php echo count($movimientosTecnicoActivos); ?> equipos activos</span>
                 </div>
                 <div class="order-list">
-                    <?php foreach ($movimientosTecnico as $movimiento): ?>
+                    <?php if (empty($movimientosTecnicoActivos)): ?>
+                        <p class="form-note">No tienes equipos pendientes de uso, revisión o devolución.</p>
+                    <?php else: ?>
+                    <?php foreach ($movimientosTecnicoActivos as $movimiento): ?>
                         <article class="order-item">
                             <h4><?php echo htmlspecialchars($movimiento['tipo']); ?> · Serie: <?php echo htmlspecialchars($movimiento['serial'] ?: 'Sin serie'); ?> · Marca: <?php echo htmlspecialchars($movimiento['marca'] ?: 'Sin marca'); ?></h4>
                         </article>
                     <?php endforeach; ?>
+                    <?php endif; ?>
                 </div>
             </div>
 

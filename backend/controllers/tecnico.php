@@ -19,41 +19,61 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['actualiz
     if (in_array($estadoEquipo, $estadosPermitidos, true)) {
         $tecnicosEquipo = getTecnicosMismoVehiculo($pdo, $tecnicoIdSesion);
         $marcadoresTecnicos = implode(', ', array_fill(0, count($tecnicosEquipo), '?'));
-        $movimiento = $pdo->prepare("SELECT equipo_id FROM equipos_tecnico WHERE id = ? AND tecnico_id IN ({$marcadoresTecnicos}) LIMIT 1");
-        $movimiento->execute(array_merge([$movimientoId], $tecnicosEquipo));
-        $movimiento = $movimiento->fetch();
+        try {
+            $pdo->beginTransaction();
+            $movimiento = $pdo->prepare("SELECT equipo_id FROM equipos_tecnico WHERE id = ? AND estado IN ('portado', 'falla') AND tecnico_id IN ({$marcadoresTecnicos}) LIMIT 1 FOR UPDATE");
+            $movimiento->execute(array_merge([$movimientoId], $tecnicosEquipo));
+            $movimiento = $movimiento->fetch();
 
-        if ($movimiento) {
-            $pdo->prepare("UPDATE equipos_tecnico SET estado = ?, observaciones = ? WHERE id = ? AND tecnico_id IN ({$marcadoresTecnicos})")->execute(
-                array_merge([$estadoEquipo, $observaciones, $movimientoId], $tecnicosEquipo)
-            );
+            if ($movimiento) {
+                $pdo->prepare("UPDATE equipos_tecnico SET estado = ?, observaciones = ? WHERE id = ? AND tecnico_id IN ({$marcadoresTecnicos})")->execute(
+                    array_merge([$estadoEquipo, $observaciones, $movimientoId], $tecnicosEquipo)
+                );
 
-            $inventarioEstado = 'asignado';
-            $condicion = null;
-            $ubicacion = $_SESSION['nombre'];
-            if ($estadoEquipo === 'no_utilizado' || $estadoEquipo === 'devuelto') {
-                $inventarioEstado = 'disponible';
-                $condicion = 'recogido';
-                $ubicacion = 'Tienda';
-            } elseif ($estadoEquipo === 'utilizado') {
-                $inventarioEstado = 'retirado';
-                $ubicacion = 'Cliente';
-            } elseif ($estadoEquipo === 'falla') {
-                $inventarioEstado = 'en_reparacion';
-                $condicion = 'danado';
-                $ubicacion = 'Revisión técnica';
-            }
+                $inventarioEstado = 'asignado';
+                $condicion = null;
+                $ubicacion = $_SESSION['nombre'];
+                if ($estadoEquipo === 'no_utilizado' || $estadoEquipo === 'devuelto') {
+                    $inventarioEstado = 'disponible';
+                    $condicion = 'recogido';
+                    $ubicacion = 'Tienda';
+                } elseif ($estadoEquipo === 'utilizado') {
+                    $inventarioEstado = 'retirado';
+                    $ubicacion = 'Cliente';
+                } elseif ($estadoEquipo === 'falla') {
+                    $inventarioEstado = 'en_reparacion';
+                    $condicion = 'danado';
+                    $ubicacion = 'Revisión técnica';
+                }
 
-            if ($condicion) {
-                $update = $pdo->prepare('UPDATE equipos SET estado = :estado, condicion = :condicion, ubicacion = :ubicacion WHERE id = :id');
-                $update->execute(['estado' => $inventarioEstado, 'condicion' => $condicion, 'ubicacion' => $ubicacion, 'id' => (int)$movimiento['equipo_id']]);
+                if ($condicion) {
+                    $update = $pdo->prepare('UPDATE equipos SET estado = :estado, condicion = :condicion, ubicacion = :ubicacion WHERE id = :id');
+                    $update->execute(['estado' => $inventarioEstado, 'condicion' => $condicion, 'ubicacion' => $ubicacion, 'id' => (int)$movimiento['equipo_id']]);
+                } else {
+                    $update = $pdo->prepare('UPDATE equipos SET estado = :estado, ubicacion = :ubicacion WHERE id = :id');
+                    $update->execute(['estado' => $inventarioEstado, 'ubicacion' => $ubicacion, 'id' => (int)$movimiento['equipo_id']]);
+                }
+                registrarActividad($pdo, 'Técnico', 'Actualizar equipo portado', 'movimiento_equipo', $movimientoId, "Movimiento actualizado a {$estadoEquipo}; inventario sincronizado.");
+                $pdo->commit();
+                $mensaje = in_array($estadoEquipo, ['no_utilizado', 'devuelto'], true)
+                    ? 'Equipo devuelto a Tienda; ya no aparece entre tus equipos y volvió al stock.'
+                    : 'Estado del equipo actualizado e inventario sincronizado.';
             } else {
-                $update = $pdo->prepare('UPDATE equipos SET estado = :estado, ubicacion = :ubicacion WHERE id = :id');
-                $update->execute(['estado' => $inventarioEstado, 'ubicacion' => $ubicacion, 'id' => (int)$movimiento['equipo_id']]);
+                $pdo->rollBack();
+                $mensaje = 'El equipo ya no está asignado como portado o en revisión.';
+                $tipoMensaje = 'danger';
             }
-            registrarActividad($pdo, 'Técnico', 'Actualizar equipo portado', 'movimiento_equipo', $movimientoId, "Movimiento actualizado a {$estadoEquipo}; inventario sincronizado.");
-            $mensaje = 'Estado del equipo actualizado e inventario sincronizado.';
+        } catch (Throwable $error) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('No se pudo actualizar el equipo del técnico: ' . $error->getMessage());
+            $mensaje = 'No se pudo actualizar el equipo. No se guardaron cambios; inténtalo de nuevo.';
+            $tipoMensaje = 'danger';
         }
+    } else {
+        $mensaje = 'El estado seleccionado no es válido.';
+        $tipoMensaje = 'danger';
     }
 }
 
@@ -375,6 +395,14 @@ $ordenes = getOrdenes($pdo, $filtroTecnico);
 $reportes = getReportes($pdo, $filtroTecnico);
 $equiposTecnico = getEquiposTecnico($pdo, $filtroTecnico);
 $movimientosTecnico = getMovimientosTecnico($pdo, $filtroTecnico);
+$movimientosTecnicoActivos = array_values(array_filter(
+    $movimientosTecnico,
+    static fn(array $movimiento): bool => in_array($movimiento['estado'], ['portado', 'falla'], true)
+));
+$movimientosTecnicoParaReporte = array_values(array_filter(
+    $movimientosTecnico,
+    static fn(array $movimiento): bool => !in_array($movimiento['estado'], ['no_utilizado', 'devuelto'], true)
+));
 $tecnico = $pdo->prepare('SELECT * FROM usuarios WHERE id = :id LIMIT 1');
 $tecnico->execute(['id' => (int)$_SESSION['usuario_id']]);
 $tecnico = $tecnico->fetch();

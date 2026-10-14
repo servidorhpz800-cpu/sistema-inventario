@@ -15,6 +15,24 @@
 /** @var array $actividad */
 /** @var ?string $mensaje */
 /** @var string $tipoMensaje */
+
+if (!isset(
+    $pestana,
+    $stats,
+    $adminCsrfToken,
+    $equipos,
+    $equiposDisponibles,
+    $usuarios,
+    $reportes,
+    $ordenes,
+    $clientes,
+    $resumenReportesClientes,
+    $movimientosTecnico,
+    $actividad,
+    $tipoMensaje
+)) {
+    throw new LogicException('El controlador de administración no preparó todos los datos requeridos por la vista.');
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">

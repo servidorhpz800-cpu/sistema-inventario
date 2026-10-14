@@ -194,6 +194,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['agregar_equipo'])) {
     }
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['recibir_equipo_tecnico'])) {
+    $movimientoId = (int)($_POST['movimiento_recepcion_id'] ?? 0);
+    $estadoRecepcion = (string)($_POST['estado_recepcion'] ?? '');
+
+    if ($movimientoId <= 0 || !in_array($estadoRecepcion, ['disponible', 'dado_baja'], true)) {
+        $mensaje = 'Selecciona un equipo y un estado de recepción válido.';
+        $tipoMensaje = 'danger';
+    } else {
+        try {
+            $pdo->beginTransaction();
+            $movimientoStmt = $pdo->prepare("SELECT et.equipo_id, et.estado
+                FROM equipos_tecnico et
+                WHERE et.id = :id AND et.estado IN ('portado', 'no_utilizado', 'falla')
+                FOR UPDATE");
+            $movimientoStmt->execute(['id' => $movimientoId]);
+            $movimiento = $movimientoStmt->fetch();
+
+            if (!$movimiento) {
+                throw new DomainException('El equipo ya fue recibido o ya no está asignado a un técnico.');
+            }
+
+            $pdo->prepare("UPDATE equipos_tecnico SET estado = 'devuelto' WHERE id = :id")->execute(['id' => $movimientoId]);
+            if ($estadoRecepcion === 'disponible') {
+                $pdo->prepare("UPDATE equipos SET estado = 'disponible', condicion = 'recogido', ubicacion = 'Tienda' WHERE id = :id")
+                    ->execute(['id' => (int)$movimiento['equipo_id']]);
+                $detalleRecepcion = 'Equipo recibido en Tienda y dado de alta en stock.';
+            } else {
+                $pdo->prepare("UPDATE equipos SET estado = 'dado_baja', ubicacion = 'Baja técnica' WHERE id = :id")
+                    ->execute(['id' => (int)$movimiento['equipo_id']]);
+                $detalleRecepcion = 'Equipo recibido en Tienda y dado de baja.';
+            }
+
+            registrarActividad($pdo, 'Tienda', 'Recibir equipo de técnico', 'movimiento_equipo', $movimientoId, $detalleRecepcion);
+            $pdo->commit();
+            $mensaje = $detalleRecepcion;
+        } catch (Throwable $error) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('No se pudo recibir el equipo del técnico: ' . $error->getMessage());
+            $mensaje = $error instanceof DomainException
+                ? $error->getMessage()
+                : 'No se pudo recibir el equipo. No se guardaron cambios; inténtalo de nuevo.';
+            $tipoMensaje = 'danger';
+        }
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_orden'])) {
     $equipoId = null;
     $tecnicoId = (int)($_POST['tecnico_id'] ?? 0);
@@ -468,13 +516,18 @@ $clientesSql = "SELECT c.*, COUNT(o.id) AS total_ordenes, MAX(o.created_at) AS u
     FROM clientes c LEFT JOIN ordenes o ON o.cliente_id = c.id
     GROUP BY c.id ORDER BY c.updated_at DESC, c.nombre ASC";
 $clientes = $pdo->query($clientesSql)->fetchAll();
-$equiposEnCampo = $pdo->query("SELECT et.*, e.tipo, e.marca, e.modelo, e.serial, u.nombre AS tecnico, o.id AS orden_numero, o.tipo_orden, COALESCE(et.cliente_nombre, o.cliente_nombre) AS cliente_nombre_actual, COALESCE(et.cliente_numero, o.cliente_numero) AS cliente_numero_actual, COALESCE(NULLIF(TRIM(o.ciudad), ''), (SELECT r.ciudad FROM reportes r WHERE r.movimiento_id = et.id AND r.ciudad IS NOT NULL AND r.ciudad <> '' ORDER BY r.created_at DESC, r.id DESC LIMIT 1)) AS ciudad, o.calle, o.numero_exterior, o.colonia, o.ubicacion_url FROM equipos_tecnico et JOIN equipos e ON e.id = et.equipo_id JOIN usuarios u ON u.id = et.tecnico_id LEFT JOIN ordenes o ON o.id = et.orden_id ORDER BY et.updated_at DESC")->fetchAll();
+$equiposEnCampo = $pdo->query("SELECT et.*, e.tipo, e.marca, e.modelo, e.serial, e.estado AS estado_inventario, u.nombre AS tecnico, o.id AS orden_numero, o.tipo_orden, COALESCE(et.cliente_nombre, o.cliente_nombre) AS cliente_nombre_actual, COALESCE(et.cliente_numero, o.cliente_numero) AS cliente_numero_actual, COALESCE(NULLIF(TRIM(o.ciudad), ''), (SELECT r.ciudad FROM reportes r WHERE r.movimiento_id = et.id AND r.ciudad IS NOT NULL AND r.ciudad <> '' ORDER BY r.created_at DESC, r.id DESC LIMIT 1)) AS ciudad, o.calle, o.numero_exterior, o.colonia, o.ubicacion_url FROM equipos_tecnico et JOIN equipos e ON e.id = et.equipo_id JOIN usuarios u ON u.id = et.tecnico_id LEFT JOIN ordenes o ON o.id = et.orden_id ORDER BY et.updated_at DESC")->fetchAll();
 foreach ($equiposEnCampo as &$movimientoCampo) {
     $movimientoCampo['cliente_nombre'] = $movimientoCampo['cliente_nombre_actual'];
     $movimientoCampo['cliente_numero'] = $movimientoCampo['cliente_numero_actual'];
     unset($movimientoCampo['cliente_nombre_actual'], $movimientoCampo['cliente_numero_actual']);
 }
 unset($movimientoCampo);
+$equiposPendientesRecepcion = array_values(array_filter(
+    $equiposEnCampo,
+    static fn(array $movimiento): bool => in_array($movimiento['estado'], ['portado', 'falla'], true)
+        || ($movimiento['estado'] === 'no_utilizado' && !in_array($movimiento['estado_inventario'], ['disponible', 'dado_baja'], true))
+));
 $stats = [
     'total' => count($equipos),
     'disponibles' => count(array_filter($equipos, fn($item) => $item['estado'] === 'disponible')),

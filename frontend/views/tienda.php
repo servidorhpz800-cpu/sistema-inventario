@@ -477,6 +477,47 @@
                 </form>
             </div>
 
+            <div class="card stacked-panel">
+                <div class="orders-toolbar">
+                    <div>
+                        <span class="eyebrow">Recepción rápida</span>
+                        <h3>Equipos que regresan de técnicos</h3>
+                    </div>
+                    <span class="badge info"><?php echo count($equiposPendientesRecepcion); ?> pendientes</span>
+                </div>
+                <p class="form-note">Recibe aquí los equipos que regresen, incluso si el técnico no pudo registrar la devolución. Elige si se dan de alta en stock o se dan de baja.</p>
+                <div class="table-wrap">
+                    <table class="table">
+                        <thead>
+                            <tr><th>Equipo / serial</th><th>Técnico</th><th>Estado reportado</th><th>Recepción</th></tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($equiposPendientesRecepcion)): ?>
+                                <tr><td colspan="4">No hay equipos pendientes de recepción.</td></tr>
+                            <?php else: ?>
+                                <?php foreach ($equiposPendientesRecepcion as $movimiento): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($movimiento['tipo']); ?> · <?php echo htmlspecialchars($movimiento['marca'] ?: 'Sin marca'); ?><br><small>Serie: <?php echo htmlspecialchars($movimiento['serial'] ?: 'Sin serie'); ?></small></td>
+                                        <td><?php echo htmlspecialchars($movimiento['tecnico']); ?></td>
+                                        <td><?php echo htmlspecialchars(str_replace('_', ' ', $movimiento['estado'])); ?></td>
+                                        <td>
+                                            <form method="POST" class="inline-actions">
+                                                <input type="hidden" name="movimiento_recepcion_id" value="<?php echo (int)$movimiento['id']; ?>">
+                                                <select name="estado_recepcion" aria-label="Estado al recibir equipo">
+                                                    <option value="disponible">Dar de alta en stock</option>
+                                                    <option value="dado_baja">Dar de baja</option>
+                                                </select>
+                                                <button type="submit" name="recibir_equipo_tecnico" class="btn btn-success">Recibir equipo</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <div class="card orders-panel stacked-panel">
                 <div class="orders-toolbar">
                     <h3>Órdenes de trabajo</h3>
