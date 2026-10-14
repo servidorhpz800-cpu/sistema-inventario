@@ -1,5 +1,8 @@
 
-
+<?php
+$error = $error ?? null;
+$success = $success ?? null;
+?>
 <!DOCTYPE html>
 <html lang="es">
 
