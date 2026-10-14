@@ -196,7 +196,7 @@
                             </div>
                             <div id="fotosReportePreview" class="report-photo-list" aria-live="polite"></div>
                         </div>
-                        <p class="form-note">Los límites de tamaño y cantidad de imágenes dependen de la configuración del servidor.</p>
+                        <p class="form-note">Solo JPG, PNG o WEBP; máximo 20 MB por imagen. Para aceptar imágenes grandes, el servidor también debe permitirlo en su configuración de PHP.</p>
                         <input type="hidden" name="latitud" id="latitudReporte">
                         <input type="hidden" name="longitud" id="longitudReporte">
                         <button type="button" id="capturarUbicacion" class="btn btn-secondary">Capturar ubicación actual</button>

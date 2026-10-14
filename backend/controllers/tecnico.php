@@ -10,6 +10,26 @@ $tipoMensaje = 'success';
 $esAdmin = $_SESSION['rol'] === 'admin';
 $tecnicoIdSesion = (int)$_SESSION['usuario_id'];
 
+$postMaximo = trim((string)ini_get('post_max_size'));
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && preg_match('/\A(\d+)\s*([KMG]?)\z/i', $postMaximo, $postMaximoPartes) === 1
+) {
+    $multiplicadores = ['' => 1, 'K' => 1024, 'M' => 1024 ** 2, 'G' => 1024 ** 3];
+    $limitePostBytes = (int)$postMaximoPartes[1] * $multiplicadores[strtoupper($postMaximoPartes[2])];
+    $contenidoPostBytes = filter_var($_SERVER['CONTENT_LENGTH'] ?? null, FILTER_VALIDATE_INT);
+    if (
+        $limitePostBytes > 0
+        && $contenidoPostBytes !== false
+        && $contenidoPostBytes > $limitePostBytes
+        && $_POST === []
+        && $_FILES === []
+    ) {
+        $mensaje = 'El envío supera el límite total de PHP. Aumenta post_max_size en la configuración del servidor y reinicia Apache.';
+        $tipoMensaje = 'danger';
+    }
+}
+
 if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['actualizar_equipo_tecnico'])) {
     $movimientoId = (int)($_POST['movimiento_id'] ?? 0);
     $estadoEquipo = $_POST['estado_equipo_tecnico'] ?? 'portado';
@@ -147,6 +167,7 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
     if ($subidaFotos !== null) {
         $cantidadFotos = is_array($subidaFotos['name']) ? count($subidaFotos['name']) : 1;
         $extensiones = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+        $tamanoMaximoFoto = 20 * 1024 * 1024;
         for ($indice = 0; $indice < $cantidadFotos; $indice++) {
             $errorFoto = is_array($subidaFotos['error']) ? $subidaFotos['error'][$indice] : $subidaFotos['error'];
             if ($errorFoto === UPLOAD_ERR_NO_FILE) {
@@ -160,6 +181,17 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
                 break;
             }
             $tmpFoto = is_array($subidaFotos['tmp_name']) ? $subidaFotos['tmp_name'][$indice] : $subidaFotos['tmp_name'];
+            $tamanoFoto = filesize($tmpFoto);
+            if ($tamanoFoto === false) {
+                $mensaje = 'No se pudo leer una de las imágenes. Inténtalo de nuevo.';
+                $tipoMensaje = 'danger';
+                break;
+            }
+            if ($tamanoFoto > $tamanoMaximoFoto) {
+                $mensaje = 'Cada imagen puede pesar como máximo 20 MB.';
+                $tipoMensaje = 'danger';
+                break;
+            }
             $mime = (new finfo(FILEINFO_MIME_TYPE))->file($tmpFoto);
             if (!isset($extensiones[$mime])) {
                 $mensaje = 'Las evidencias deben ser JPG, PNG o WEBP.';

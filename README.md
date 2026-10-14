@@ -32,6 +32,18 @@ La aplicación usa una sola conexión PDO compartida por todos sus módulos. La 
 
 Las sesiones de acceso usan una cookie persistente de hasta 10 años y no se cierran por inactividad normal. En equipos compartidos, usa siempre **Cerrar sesión** al terminar.
 
+### Imágenes de reportes
+
+Las imágenes JPG, PNG y WEBP se guardan como archivos en `uploads/reportes/`; la base de datos conserva únicamente sus nombres para poder mostrarlas después. Cada imagen puede pesar hasta 20 MB. Para permitir ese tamaño en XAMPP, abre `php.ini` desde **Apache > Config > PHP (php.ini)** en el panel de XAMPP y configura:
+
+```ini
+upload_max_filesize = 20M
+post_max_size = 128M
+max_file_uploads = 20
+```
+
+Guarda el archivo y reinicia Apache. `post_max_size` debe ser mayor que `upload_max_filesize` porque cubre el envío completo del formulario y todas sus imágenes. Mantén respaldos de `uploads/reportes/` junto con los de la base de datos; si cambias de servidor, copia también esa carpeta o configura `COMPUSER_REPORTES_DIR` con una ruta absoluta y persistente.
+
 ## Base de datos central
 
 Para configurar TiDB Cloud, copia `config/database.local.example.php` como `config/database.local.php` y edita ahí el host, usuario, contraseña y certificado CA. Ese archivo está excluido por `.gitignore` y no debe subirse a GitHub. También puedes definir `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS` y `DB_SSL_CA` en el entorno de Apache; las variables de entorno tienen prioridad. TiDB Cloud usa normalmente el puerto `4000`.
