@@ -34,7 +34,7 @@ Las sesiones de acceso usan una cookie persistente de hasta 10 años y no se cie
 
 ### Imágenes de reportes
 
-Las imágenes JPG, PNG y WEBP se guardan como archivos en `uploads/reportes/`; la base de datos conserva únicamente sus nombres para poder mostrarlas después. Cada imagen puede pesar hasta 20 MB. Para permitir ese tamaño en XAMPP, abre `php.ini` desde **Apache > Config > PHP (php.ini)** en el panel de XAMPP y configura:
+Las imágenes JPG, PNG y WEBP se guardan como archivos en `uploads/reportes/`; la base de datos conserva únicamente sus nombres para poder mostrarlas después. Cada imagen puede pesar hasta 20 MB y el envío completo hasta 128 MB. En Render, estos valores se aplican al reconstruir la imagen Docker con `php-upload.ini`; después de subir cambios, espera a que termine el nuevo despliegue. Para XAMPP, abre `php.ini` desde **Apache > Config > PHP (php.ini)** en el panel de XAMPP y configura:
 
 ```ini
 upload_max_filesize = 20M
@@ -88,7 +88,7 @@ cp -a /var/www/html/uploads/reportes/. /var/data/compuser/reportes/
 chown -R www-data:www-data /var/data/compuser/reportes
 ```
 
-Si ejecutas más de un servidor web, la ruta debe apuntar a almacenamiento compartido entre todos ellos. Sin disco persistente, el directorio predeterminado bajo `uploads/reportes` puede perder sus archivos al reemplazarse el contenedor o el servidor. No se guardan imágenes binarias en MySQL para evitar inflar y ralentizar la base. La aplicación no impone un máximo de tamaño o cantidad de imágenes; esos límites, si los hay, dependen de PHP (`upload_max_filesize`, `post_max_size`, `max_file_uploads`) y del servidor web. Al enviar un reporte técnico con ubicación GPS, la ciudad y el enlace del mapa se actualizan en el registro del cliente y en la orden relacionada para reutilizarlos en futuras visitas.
+Si ejecutas más de un servidor web, la ruta debe apuntar a almacenamiento compartido entre todos ellos. Sin disco persistente, el directorio predeterminado bajo `uploads/reportes` puede perder sus archivos al reemplazarse el contenedor o el servidor. No se guardan imágenes binarias en MySQL para evitar inflar y ralentizar la base. La aplicación permite imágenes de hasta 20 MB cada una, sujetas también a los límites de PHP y del servidor web. Al enviar un reporte técnico con ubicación GPS, la ciudad y el enlace del mapa se actualizan en el registro del cliente y en la orden relacionada para reutilizarlos en futuras visitas.
 
 ## Funcionalidades
 

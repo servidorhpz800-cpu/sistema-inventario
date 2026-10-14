@@ -6,6 +6,9 @@ RUN docker-php-ext-install pdo pdo_mysql
 # Habilitar mod_rewrite de Apache
 RUN a2enmod rewrite
 
+# Configurar límites de carga y evitar warnings de PHP en la respuesta web
+COPY php-upload.ini /usr/local/etc/php/conf.d/php-upload.ini
+
 # Copiar el proyecto al servidor web
 COPY . /var/www/html/
 
