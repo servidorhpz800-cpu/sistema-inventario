@@ -6,6 +6,8 @@ const inventory = window.inventoryData;
         const barcodeResult = document.getElementById('barcodeResult')
             || document.querySelector('#stockEquipmentForm [data-modem-detection-result]');
         const dispatchSelect = document.querySelector('select[name="despacho_equipo_id"]');
+        const dispatchSerialSearch = document.querySelector('[data-dispatch-serial-search]');
+        const dispatchSearchResult = document.querySelector('[data-dispatch-search-result]');
         const serialButtons = document.querySelectorAll('[data-scan-target]');
         const serialFileTriggers = document.querySelectorAll('[data-scan-file-trigger]');
         const serialFileInputs = document.querySelectorAll('[data-scan-file-target]');
@@ -17,6 +19,33 @@ const inventory = window.inventoryData;
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
+        }
+
+        if (dispatchSelect && dispatchSerialSearch) {
+            const filtrarEquipos = () => {
+                const busqueda = dispatchSerialSearch.value.trim().toLocaleLowerCase();
+                let coincidencias = 0;
+                Array.from(dispatchSelect.options).forEach((opcion) => {
+                    if (opcion.value === '') {
+                        return;
+                    }
+                    opcion.hidden = busqueda !== ''
+                        && !String(opcion.dataset.serial || '').toLocaleLowerCase().includes(busqueda);
+                    if (!opcion.hidden) {
+                        coincidencias++;
+                    }
+                });
+                if (dispatchSearchResult) {
+                    dispatchSearchResult.textContent = busqueda
+                        ? `${coincidencias} equipos disponibles coinciden con la búsqueda.`
+                        : `${coincidencias} equipos disponibles.`;
+                }
+            };
+
+            dispatchSerialSearch.addEventListener('input', () => {
+                dispatchSelect.value = '';
+                filtrarEquipos();
+            });
         }
 
         function parseScannedValue(rawValue) {
@@ -166,6 +195,10 @@ const inventory = window.inventoryData;
             }
 
             if (dispatchSelect) {
+                if (dispatchSerialSearch && dispatchSerialSearch.value !== '') {
+                    dispatchSerialSearch.value = '';
+                    dispatchSerialSearch.dispatchEvent(new Event('input', { bubbles: true }));
+                }
                 dispatchSelect.value = String(match.id);
             }
 

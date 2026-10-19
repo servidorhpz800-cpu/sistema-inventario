@@ -452,11 +452,16 @@
                         </select>
                     </label>
                     <label>
+                        <span>Buscar por número de serie</span>
+                        <input type="search" data-dispatch-serial-search autocomplete="off" placeholder="Escribe la serie o sus últimos dígitos">
+                        <small data-dispatch-search-result aria-live="polite"><?php echo count($equiposDisponibles); ?> equipos disponibles.</small>
+                    </label>
+                    <label>
                         <span>Equipo</span>
-                        <select name="despacho_equipo_id" required>
+                        <select name="despacho_equipo_id" data-dispatch-equipment-select required>
                             <option value="">Seleccione un equipo disponible</option>
                             <?php foreach ($equiposDisponibles as $equipo): ?>
-                                <option value="<?php echo (int)$equipo['id']; ?>"><?php echo htmlspecialchars($equipo['tipo']); ?> · <?php echo htmlspecialchars($equipo['marca'] ?: 'Sin marca'); ?> · <?php echo htmlspecialchars($equipo['serial'] ?: 'Sin serial'); ?></option>
+                                <option value="<?php echo (int)$equipo['id']; ?>" data-serial="<?php echo htmlspecialchars($equipo['serial'] ?? '', ENT_QUOTES); ?>"><?php echo htmlspecialchars($equipo['tipo']); ?> · <?php echo htmlspecialchars($equipo['marca'] ?: 'Sin marca'); ?> · <?php echo htmlspecialchars($equipo['serial'] ?: 'Sin serial'); ?></option>
                             <?php endforeach; ?>
                         </select>
                     </label>

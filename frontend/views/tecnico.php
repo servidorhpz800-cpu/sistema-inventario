@@ -17,7 +17,25 @@
                 <a class="active" href="tecnico.php">Técnicos</a>
                 <a href="logout.php">Cerrar sesión</a>
             </nav>
-            <div class="user-chip"><?php echo htmlspecialchars($_SESSION['nombre']); ?> / <?php echo htmlspecialchars($_SESSION['equipo'] ?: 'Sin equipo'); ?></div>
+            <div class="user-chip"><?php echo htmlspecialchars($_SESSION['nombre']);             /** @var bool $esAdmin */
+            /** @var array $ordenes */
+            /** @var array $movimientosTecnicoParaReporte */
+            /** @var array $movimientosTecnicoActivos */
+            /** @var array $reportes */
+            /** @var ?string $mensaje */
+            /** @var string $tipoMensaje */
+
+            if (!isset(
+                $esAdmin,
+                $ordenes,
+                $movimientosTecnicoParaReporte,
+                $movimientosTecnicoActivos,
+                $reportes,
+                $tipoMensaje
+            )) {
+                throw new LogicException('El controlador técnico no preparó todos los datos requeridos por la vista.');
+            }
+            ?> / <?php echo htmlspecialchars($_SESSION['equipo'] ?: 'Sin equipo'); ?></div>
         </header>
 
         <div class="container">
@@ -213,11 +231,11 @@
                     <div class="card-heading">
                         <div>
                             <span class="eyebrow">Equipos despachados por Tienda</span>
-                            <h3>Resultado del módem en campo</h3>
+                            <h3>Seguimiento del módem en campo</h3>
                         </div>
                         <span class="step-number">02</span>
                     </div>
-                    <p class="form-note">Estos son los equipos que todavía tienes asignados. Al marcar “No utilizado” o “Devuelto a tienda”, el equipo vuelve al stock y deja de aparecer en tu lista.</p>
+                    <p class="form-note">Desde aquí solo puedes guardar observaciones. Para registrar el uso, una falla o dar de baja un módem, envía un reporte con los datos del cliente. La devolución física se registra en Tienda.</p>
                     <form method="POST">
                         <label>
                             <span>Equipo registrado</span>
@@ -230,21 +248,12 @@
                                 <?php endforeach; ?>
                             </select>
                         </label>
-                        <label>
-                            <span>Resultado</span>
-                            <select name="estado_equipo_tecnico" required>
-                                <option value="portado">Sigue portado</option>
-                                <option value="utilizado">Utilizado en cliente</option>
-                                <option value="no_utilizado">No utilizado, devolver a tienda</option>
-                                <option value="falla">Presentó falla, enviar a revisión</option>
-                                <option value="devuelto">Devuelto a tienda</option>
-                            </select>
-                        </label>
+                        <input type="hidden" name="estado_equipo_tecnico" value="portado">
                         <label>
                             <span>Detalle de la situación</span>
-                            <textarea name="equipo_observaciones_actualizacion" placeholder="Indica por qué no se utilizó o qué falla presentó."></textarea>
+                            <textarea name="equipo_observaciones_actualizacion" placeholder="Agrega notas sobre el módem asignado."></textarea>
                         </label>
-                        <button type="submit" name="actualizar_equipo_tecnico" class="btn btn-success">Guardar resultado</button>
+                        <button type="submit" name="actualizar_equipo_tecnico" class="btn btn-success">Guardar observaciones</button>
                     </form>
             </div>
             <?php endif; ?>

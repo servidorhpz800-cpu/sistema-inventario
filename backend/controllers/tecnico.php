@@ -34,7 +34,7 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['actualiz
     $movimientoId = (int)($_POST['movimiento_id'] ?? 0);
     $estadoEquipo = $_POST['estado_equipo_tecnico'] ?? 'portado';
     $observaciones = trim($_POST['equipo_observaciones_actualizacion'] ?? '');
-    $estadosPermitidos = ['portado', 'utilizado', 'no_utilizado', 'falla', 'devuelto'];
+    $estadosPermitidos = ['portado'];
 
     if (in_array($estadoEquipo, $estadosPermitidos, true)) {
         $tecnicosEquipo = getTecnicosMismoVehiculo($pdo, $tecnicoIdSesion);
@@ -46,38 +46,13 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['actualiz
             $movimiento = $movimiento->fetch();
 
             if ($movimiento) {
-                $pdo->prepare("UPDATE equipos_tecnico SET estado = ?, observaciones = ? WHERE id = ? AND tecnico_id IN ({$marcadoresTecnicos})")->execute(
-                    array_merge([$estadoEquipo, $observaciones, $movimientoId], $tecnicosEquipo)
+                $pdo->prepare("UPDATE equipos_tecnico SET observaciones = ? WHERE id = ? AND tecnico_id IN ({$marcadoresTecnicos})")->execute(
+                    array_merge([$observaciones, $movimientoId], $tecnicosEquipo)
                 );
 
-                $inventarioEstado = 'asignado';
-                $condicion = null;
-                $ubicacion = $_SESSION['nombre'];
-                if ($estadoEquipo === 'no_utilizado' || $estadoEquipo === 'devuelto') {
-                    $inventarioEstado = 'disponible';
-                    $condicion = 'recogido';
-                    $ubicacion = 'Tienda';
-                } elseif ($estadoEquipo === 'utilizado') {
-                    $inventarioEstado = 'retirado';
-                    $ubicacion = 'Cliente';
-                } elseif ($estadoEquipo === 'falla') {
-                    $inventarioEstado = 'en_reparacion';
-                    $condicion = 'danado';
-                    $ubicacion = 'Revisión técnica';
-                }
-
-                if ($condicion) {
-                    $update = $pdo->prepare('UPDATE equipos SET estado = :estado, condicion = :condicion, ubicacion = :ubicacion WHERE id = :id');
-                    $update->execute(['estado' => $inventarioEstado, 'condicion' => $condicion, 'ubicacion' => $ubicacion, 'id' => (int)$movimiento['equipo_id']]);
-                } else {
-                    $update = $pdo->prepare('UPDATE equipos SET estado = :estado, ubicacion = :ubicacion WHERE id = :id');
-                    $update->execute(['estado' => $inventarioEstado, 'ubicacion' => $ubicacion, 'id' => (int)$movimiento['equipo_id']]);
-                }
-                registrarActividad($pdo, 'Técnico', 'Actualizar equipo portado', 'movimiento_equipo', $movimientoId, "Movimiento actualizado a {$estadoEquipo}; inventario sincronizado.");
+                registrarActividad($pdo, 'Técnico', 'Actualizar observaciones de equipo', 'movimiento_equipo', $movimientoId, 'Observaciones del equipo actualizadas; el inventario no cambió.');
                 $pdo->commit();
-                $mensaje = in_array($estadoEquipo, ['no_utilizado', 'devuelto'], true)
-                    ? 'Equipo devuelto a Tienda; ya no aparece entre tus equipos y volvió al stock.'
-                    : 'Estado del equipo actualizado e inventario sincronizado.';
+                $mensaje = 'Observaciones guardadas. Para registrar uso o una falla, envía un reporte asociado a un cliente.';
             } else {
                 $pdo->rollBack();
                 $mensaje = 'El equipo ya no está asignado como portado o en revisión.';
@@ -92,7 +67,7 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['actualiz
             $tipoMensaje = 'danger';
         }
     } else {
-        $mensaje = 'El estado seleccionado no es válido.';
+        $mensaje = 'No puedes cambiar el estado del módem desde aquí. Registra su uso o falla mediante un reporte asociado a un cliente.';
         $tipoMensaje = 'danger';
     }
 }
@@ -359,7 +334,7 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-            foreach (array_merge($fotosGuardadas, $firmaGuardada !== null ? [$firmaGuardada] : []) as $archivoGuardado) {
+            foreach ($fotosGuardadas as $archivoGuardado) {
                 $rutaFotoGuardada = $directorioFotos !== null
                     ? $directorioFotos . DIRECTORY_SEPARATOR . basename($archivoGuardado)
                     : null;
