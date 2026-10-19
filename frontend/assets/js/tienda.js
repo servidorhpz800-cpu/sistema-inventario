@@ -35,7 +35,7 @@ const inventory = window.inventoryData;
 
                 if (busqueda.length < 3) {
                     if (dispatchSearchResult) {
-                        dispatchSearchResult.textContent = 'Escribe los últimos 3 o 4 números o letras del SN.';
+                        dispatchSearchResult.textContent = 'Escribe al menos los últimos 3 números o letras del SN.';
                     }
                     return;
                 }
@@ -48,21 +48,26 @@ const inventory = window.inventoryData;
                 if (coincidencias.length === 1) {
                     dispatchSelect.value = coincidencias[0].value;
                     if (dispatchSearchResult) {
-                        dispatchSearchResult.textContent = `Módem seleccionado: ${coincidencias[0].textContent.trim()}`;
+                        dispatchSearchResult.textContent = `Módem encontrado y seleccionado: ${coincidencias[0].textContent.trim()}`;
                     }
                 } else if (dispatchSearchResult) {
                     dispatchSearchResult.textContent = coincidencias.length > 1
-                        ? `Hay ${coincidencias.length} módems que terminan así. Escribe más números o letras.`
-                        : 'No hay módem disponible con ese final de SN.';
+                        ? `Hay ${coincidencias.length} módems que terminan en "${dispatchSerialSearch.value.trim()}". Escribe más caracteres para identificar uno.`
+                        : `No se encontró un módem disponible cuyo SN termine en "${dispatchSerialSearch.value.trim()}".`;
                 }
             };
 
             if (dispatchSearchResult) {
-                dispatchSearchResult.textContent = 'Escribe los últimos 3 o 4 números o letras del SN.';
+                dispatchSearchResult.textContent = 'Escribe los últimos 3 o 4 números o letras del SN y presiona Enter.';
             }
-            dispatchSerialSearch.addEventListener('input', buscarPorFinalDeSerie);
             dispatchSerialSearch.addEventListener('keydown', (event) => {
                 if (event.key === 'Enter') {
+                    event.preventDefault();
+                    buscarPorFinalDeSerie();
+                }
+            });
+            dispatchSerialSearch.closest('form')?.addEventListener('submit', (event) => {
+                if (document.activeElement === dispatchSerialSearch) {
                     event.preventDefault();
                     buscarPorFinalDeSerie();
                 }
@@ -221,7 +226,7 @@ const inventory = window.inventoryData;
                 }
                 dispatchSelect.value = String(match.id);
                 if (dispatchSearchResult && dispatchSelect.selectedOptions[0]?.value === String(match.id)) {
-                    dispatchSearchResult.textContent = `Módem seleccionado: ${dispatchSelect.selectedOptions[0].textContent.trim()}`;
+                    dispatchSearchResult.textContent = `Módem encontrado y seleccionado: ${dispatchSelect.selectedOptions[0].textContent.trim()}`;
                 }
             }
 

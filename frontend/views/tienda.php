@@ -1,4 +1,38 @@
 
+<?php
+/** @var string $vistaTienda */
+/** @var bool $archivadas */
+/** @var array $equipos */
+/** @var array $equiposDisponibles */
+/** @var array $tecnicos */
+/** @var array $ordenes */
+/** @var array $reportes */
+/** @var array $clientes */
+/** @var array $equiposEnCampo */
+/** @var array $equiposPendientesRecepcion */
+/** @var array $stats */
+/** @var array $resumenReportesClientes */
+/** @var ?string $mensaje */
+/** @var string $tipoMensaje */
+
+if (!isset(
+    $vistaTienda,
+    $archivadas,
+    $equipos,
+    $equiposDisponibles,
+    $tecnicos,
+    $ordenes,
+    $reportes,
+    $clientes,
+    $equiposEnCampo,
+    $equiposPendientesRecepcion,
+    $stats,
+    $resumenReportesClientes,
+    $tipoMensaje
+)) {
+    throw new LogicException('El controlador de tienda no preparó todos los datos requeridos por la vista.');
+}
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -454,7 +488,7 @@
                     <label>
                         <span>Buscar módem por el final del SN</span>
                         <input type="search" data-dispatch-serial-search autocomplete="off" placeholder="Escribe los últimos 3 o 4 números o letras">
-                        <small data-dispatch-search-result aria-live="polite">Escribe los últimos 3 o 4 números o letras del SN.</small>
+                        <span class="form-note" data-dispatch-search-result role="status" aria-live="polite">Escribe los últimos 3 o 4 números o letras del SN y presiona Enter.</span>
                     </label>
                     <label>
                         <span>Equipo</span>
@@ -664,6 +698,6 @@
     <script>window.inventoryData = <?php echo json_encode($equipos, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;</script>
     <script src="frontend/assets/js/report-filters.js" defer></script>
     <script src="frontend/assets/js/modem-detection.js" defer></script>
-    <script src="frontend/assets/js/tienda.js" defer></script>
+    <script src="frontend/assets/js/tienda.js?v=<?php echo (int)filemtime(__DIR__ . '/../assets/js/tienda.js'); ?>" defer></script>
 </body>
 </html>
