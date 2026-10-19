@@ -217,7 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['recibir_equipo_tecnic
 
             $pdo->prepare("UPDATE equipos_tecnico SET estado = 'devuelto' WHERE id = :id")->execute(['id' => $movimientoId]);
             if ($estadoRecepcion === 'disponible') {
-                $pdo->prepare("UPDATE equipos SET estado = 'disponible', condicion = 'recogido', ubicacion = 'Tienda' WHERE id = :id")
+                $pdo->prepare("UPDATE equipos SET estado = 'disponible', condicion = 'nuevo', ubicacion = 'Tienda' WHERE id = :id")
                     ->execute(['id' => (int)$movimiento['equipo_id']]);
                 $detalleRecepcion = 'Equipo recibido en Tienda y dado de alta en stock.';
             } else {
