@@ -33,7 +33,7 @@ const inventory = window.inventoryData;
                 const busqueda = normalizarSerie(dispatchSerialSearch.value);
                 dispatchSelect.value = '';
 
-                if (busqueda.length < 4) {
+                if (busqueda.length < 3) {
                     if (dispatchSearchResult) {
                         dispatchSearchResult.textContent = 'Escribe los últimos 3 o 4 números o letras del SN.';
                     }
@@ -61,6 +61,12 @@ const inventory = window.inventoryData;
                 dispatchSearchResult.textContent = 'Escribe los últimos 3 o 4 números o letras del SN.';
             }
             dispatchSerialSearch.addEventListener('input', buscarPorFinalDeSerie);
+            dispatchSerialSearch.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    buscarPorFinalDeSerie();
+                }
+            });
         }
 
         function parseScannedValue(rawValue) {
