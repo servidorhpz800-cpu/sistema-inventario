@@ -22,30 +22,45 @@ const inventory = window.inventoryData;
         }
 
         if (dispatchSelect && dispatchSerialSearch) {
-            const filtrarEquipos = () => {
-                const busqueda = dispatchSerialSearch.value.trim().toLocaleLowerCase();
-                let coincidencias = 0;
-                Array.from(dispatchSelect.options).forEach((opcion) => {
-                    if (opcion.value === '') {
-                        return;
+            const opcionesEquipos = Array.from(dispatchSelect.options).filter((opcion) => opcion.value !== '');
+            const normalizarSerie = (serie) => String(serie || '').replace(/[^a-z0-9]/gi, '').toLocaleLowerCase();
+            const etiquetaEquipo = dispatchSelect.closest('label');
+            if (etiquetaEquipo) {
+                etiquetaEquipo.hidden = true;
+            }
+
+            const buscarPorFinalDeSerie = () => {
+                const busqueda = normalizarSerie(dispatchSerialSearch.value);
+                dispatchSelect.value = '';
+
+                if (busqueda.length < 4) {
+                    if (dispatchSearchResult) {
+                        dispatchSearchResult.textContent = 'Escribe los últimos 3 o 4 números o letras del SN.';
                     }
-                    opcion.hidden = busqueda !== ''
-                        && !String(opcion.dataset.serial || '').toLocaleLowerCase().includes(busqueda);
-                    if (!opcion.hidden) {
-                        coincidencias++;
-                    }
+                    return;
+                }
+
+                const coincidencias = opcionesEquipos.filter((opcion) => {
+                    const serial = normalizarSerie(opcion.dataset.serial);
+                    return serial.endsWith(busqueda);
                 });
-                if (dispatchSearchResult) {
-                    dispatchSearchResult.textContent = busqueda
-                        ? `${coincidencias} equipos disponibles coinciden con la búsqueda.`
-                        : `${coincidencias} equipos disponibles.`;
+
+                if (coincidencias.length === 1) {
+                    dispatchSelect.value = coincidencias[0].value;
+                    if (dispatchSearchResult) {
+                        dispatchSearchResult.textContent = `Módem seleccionado: ${coincidencias[0].textContent.trim()}`;
+                    }
+                } else if (dispatchSearchResult) {
+                    dispatchSearchResult.textContent = coincidencias.length > 1
+                        ? `Hay ${coincidencias.length} módems que terminan así. Escribe más números o letras.`
+                        : 'No hay módem disponible con ese final de SN.';
                 }
             };
 
-            dispatchSerialSearch.addEventListener('input', () => {
-                dispatchSelect.value = '';
-                filtrarEquipos();
-            });
+            if (dispatchSearchResult) {
+                dispatchSearchResult.textContent = 'Escribe los últimos 3 o 4 números o letras del SN.';
+            }
+            dispatchSerialSearch.addEventListener('input', buscarPorFinalDeSerie);
         }
 
         function parseScannedValue(rawValue) {
@@ -197,9 +212,11 @@ const inventory = window.inventoryData;
             if (dispatchSelect) {
                 if (dispatchSerialSearch && dispatchSerialSearch.value !== '') {
                     dispatchSerialSearch.value = '';
-                    dispatchSerialSearch.dispatchEvent(new Event('input', { bubbles: true }));
                 }
                 dispatchSelect.value = String(match.id);
+                if (dispatchSearchResult && dispatchSelect.selectedOptions[0]?.value === String(match.id)) {
+                    dispatchSearchResult.textContent = `Módem seleccionado: ${dispatchSelect.selectedOptions[0].textContent.trim()}`;
+                }
             }
 
             barcodeResult.innerHTML = buildMatchMarkup(match);

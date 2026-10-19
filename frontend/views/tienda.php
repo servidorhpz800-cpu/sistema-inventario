@@ -452,9 +452,9 @@
                         </select>
                     </label>
                     <label>
-                        <span>Buscar por número de serie</span>
-                        <input type="search" data-dispatch-serial-search autocomplete="off" placeholder="Escribe la serie o sus últimos dígitos">
-                        <small data-dispatch-search-result aria-live="polite"><?php echo count($equiposDisponibles); ?> equipos disponibles.</small>
+                        <span>Buscar módem por el final del SN</span>
+                        <input type="search" data-dispatch-serial-search autocomplete="off" placeholder="Escribe los últimos 3 o 4 números o letras">
+                        <small data-dispatch-search-result aria-live="polite">Escribe los últimos 3 o 4 números o letras del SN.</small>
                     </label>
                     <label>
                         <span>Equipo</span>
