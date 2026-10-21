@@ -583,6 +583,28 @@ if (!isset(
                         $urlMapaOrden = $orden['ubicacion_url'] ?: ($direccionOrden !== ''
                             ? 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($direccionOrden)
                             : '');
+                        $telefonoWhatsAppTecnico = getTelefonoWhatsAppTecnico((string)$orden['tecnico_usuario']);
+                        $lineasMensajeWhatsApp = array_filter([
+                            'Hola ' . $orden['tecnico'] . ', te comparto una nueva orden de trabajo.',
+                            'Folio: #' . $orden['id'],
+                            'Tipo: ' . str_replace('_', ' ', ucfirst($orden['tipo_orden'])),
+                            'Cliente: ' . ($orden['cliente_nombre'] ?: ''),
+                            'Teléfono del cliente: ' . ($orden['cliente_numero'] ?: ''),
+                            'Dirección: ' . $direccionOrden,
+                            'Referencias: ' . ($orden['referencias'] ?: ''),
+                            'Equipo: ' . implode(' ', array_filter([
+                                $orden['tipo'] ?? '',
+                                $orden['marca'] ?? '',
+                                $orden['modelo'] ?? '',
+                                $orden['serial'] ? 'SN ' . $orden['serial'] : '',
+                            ])),
+                            'IP: ' . ($orden['ip_asignada'] ?: ''),
+                            'Indicaciones: ' . ($orden['descripcion'] ?: ''),
+                            $urlMapaOrden !== '' ? 'Ubicación: ' . $urlMapaOrden : '',
+                        ], static fn(string $linea): bool => !preg_match('/:\s*$/', $linea));
+                        $urlWhatsAppOrden = $telefonoWhatsAppTecnico !== null
+                            ? 'https://wa.me/' . $telefonoWhatsAppTecnico . '?text=' . rawurlencode(implode("\n", $lineasMensajeWhatsApp))
+                            : null;
                         ?>
                         <details class="order-item order-details" data-order-type="<?php echo htmlspecialchars($orden['tipo_orden']); ?>">
                             <summary class="order-item-head">
@@ -604,6 +626,12 @@ if (!isset(
                                     <a href="<?php echo htmlspecialchars($urlMapaOrden, ENT_QUOTES); ?>" target="_blank" rel="noopener" class="btn btn-secondary">Abrir mapa</a>
                                 <?php endif; ?>
                                 <?php if (!empty($orden['descripcion'])): ?><p class="order-description"><?php echo htmlspecialchars($orden['descripcion']); ?></p><?php endif; ?>
+                                <?php if ($urlWhatsAppOrden !== null): ?>
+                                    <a href="<?php echo htmlspecialchars($urlWhatsAppOrden, ENT_QUOTES); ?>" target="_blank" rel="noopener noreferrer" class="btn btn-success">Enviar detalles por WhatsApp</a>
+                                    <p class="form-note">Se abrirá el chat de este técnico con los detalles listos. Revisa el mensaje y pulsa Enviar en WhatsApp.</p>
+                                <?php else: ?>
+                                    <p class="form-note">No hay un teléfono de WhatsApp válido configurado para este técnico.</p>
+                                <?php endif; ?>
                             </div>
                         </details>
                     <?php endforeach; ?>

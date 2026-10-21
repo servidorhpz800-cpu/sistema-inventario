@@ -398,9 +398,6 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['actualiz
 manejarPostRedirectGet($mensaje, $tipoMensaje);
 
 $filtroTecnico = $esAdmin ? null : $tecnicoIdSesion;
-if (!$esAdmin) {
-    $ultimoIdOrdenNotificacion = (int)$pdo->query('SELECT COALESCE(MAX(id), 0) FROM ordenes')->fetchColumn();
-}
 $ordenes = getOrdenes($pdo, $filtroTecnico);
 $reportes = getReportes($pdo, $filtroTecnico);
 $equiposTecnico = getEquiposTecnico($pdo, $filtroTecnico);

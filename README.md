@@ -52,11 +52,11 @@ Para configurar TiDB Cloud, copia `config/database.local.example.php` como `conf
 
 Configura en el servicio web de Render las variables `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` y `DB_PASS` con los datos de tu servidor MySQL externo. Usa el puerto que indique ese proveedor (`4000` es el valor predeterminado del proyecto para TiDB Cloud; otros servidores MySQL suelen usar `3306`). `DB_NAME` debe ser la base donde se instalará el esquema, normalmente `compuser_inventario`.
 
-### Notificaciones de nuevas órdenes en el navegador
+### Enviar órdenes a técnicos por WhatsApp
 
-En el panel técnico, cada técnico puede activar las notificaciones desde **Activar notificaciones** y aceptar el permiso que muestra el navegador. Después, el panel consulta si hay órdenes nuevas asignadas a ese técnico cada 15 segundos y muestra una notificación del sistema con el tipo de trabajo y el folio. No hace falta WhatsApp ni una API externa.
+En Tienda, abre el detalle de una orden y pulsa **Enviar detalles por WhatsApp**. El sistema abre el chat del técnico asignado con el tipo de trabajo, folio, cliente, domicilio, equipo e indicaciones preparados como texto. La computadora de Tienda debe tener WhatsApp Web iniciado (o la aplicación de WhatsApp instalada); revisa el texto y pulsa **Enviar**. El enlace no envía mensajes por sí solo ni adjunta archivos automáticamente.
 
-El panel debe permanecer abierto y con la sesión iniciada para consultar nuevas órdenes; no se envían avisos cuando el navegador está cerrado. El sitio debe abrirse por HTTPS o desde `localhost`, y el navegador debe admitir notificaciones. Si el permiso se bloqueó, se debe habilitar desde los permisos del sitio en el navegador. Las notificaciones se solicitan mediante el botón del panel, no al entrar automáticamente al sitio.
+En XAMPP, `config/whatsapp.local.php` guarda los teléfonos de cada técnico en `technician_phones`, usando el nombre de usuario como clave y el número mexicano en formato internacional (+52). Para otro servidor, configura `WHATSAPP_TECHNICIAN_PHONES` con un objeto JSON usuario/teléfono, por ejemplo `{"jorge":"+52XXXXXXXXXX","kevin":"+52XXXXXXXXXX"}`. No se requiere WhatsApp Business API.
 
 Render ejecuta la aplicación, pero el esquema no se importa automáticamente. Con un cliente MySQL conectado a esa misma base y servidor, importa `database/schema.sql` una sola vez con una cuenta que tenga permisos para crear tablas e insertar los usuarios iniciales. Después verifica que exista `usuarios` (por ejemplo, con `SHOW TABLES;`). No ejecutes el esquema repetidamente sobre una instalación existente.
 

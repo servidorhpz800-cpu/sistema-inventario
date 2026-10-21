@@ -73,6 +73,36 @@ function getUsuarios(PDO $pdo, ?string $rol = null): array
     return $stmt->fetchAll();
 }
 
+function getTelefonoWhatsAppTecnico(string $usuario): ?string
+{
+    $telefonos = [];
+    $telefonosEntorno = getenv('WHATSAPP_TECHNICIAN_PHONES');
+    if ($telefonosEntorno !== false && $telefonosEntorno !== '') {
+        $telefonos = json_decode($telefonosEntorno, true);
+        if (!is_array($telefonos)) {
+            error_log('WHATSAPP_TECHNICIAN_PHONES debe contener un objeto JSON válido.');
+            return null;
+        }
+    } else {
+        $rutaConfiguracion = dirname(__DIR__) . '/config/whatsapp.local.php';
+        if (is_file($rutaConfiguracion)) {
+            $configuracion = require $rutaConfiguracion;
+            if (!is_array($configuracion)) {
+                error_log('config/whatsapp.local.php debe devolver un arreglo.');
+                return null;
+            }
+            $telefonos = $configuracion['technician_phones'] ?? [];
+        }
+    }
+
+    if (!is_array($telefonos)) {
+        return null;
+    }
+
+    $telefono = preg_replace('/\D+/', '', (string)($telefonos[$usuario] ?? ''));
+    return $telefono !== null && preg_match('/^52\d{10}$/', $telefono) ? $telefono : null;
+}
+
 function getInventario(PDO $pdo): array
 {
     $stmt = $pdo->query('SELECT * FROM equipos ORDER BY updated_at DESC');
@@ -115,7 +145,7 @@ function getOrdenes(PDO $pdo, ?int $tecnicoId = null, bool $archivadas = false):
     $filtroArchivo = $archivadas
         ? "o.created_at < CURRENT_DATE AND o.estado <> 'pendiente'"
         : "(o.created_at >= CURRENT_DATE OR o.estado = 'pendiente')";
-    $sql = "SELECT o.*, e.tipo, e.marca, e.modelo, e.serial, e.condicion, u.nombre AS tecnico FROM ordenes o LEFT JOIN equipos e ON e.id = o.equipo_id JOIN usuarios u ON u.id = o.tecnico_id WHERE o.tipo_orden <> 'revision' AND {$filtroArchivo}";
+    $sql = "SELECT o.*, e.tipo, e.marca, e.modelo, e.serial, e.condicion, u.nombre AS tecnico, u.usuario AS tecnico_usuario FROM ordenes o LEFT JOIN equipos e ON e.id = o.equipo_id JOIN usuarios u ON u.id = o.tecnico_id WHERE o.tipo_orden <> 'revision' AND {$filtroArchivo}";
 
     if ($tecnicoId !== null) {
         $tecnicosEquipo = getTecnicosMismoVehiculo($pdo, $tecnicoId);
@@ -137,7 +167,7 @@ function getReportes(PDO $pdo, ?int $tecnicoId = null, bool $archivadas = false)
         : ($archivadas
             ? "r.created_at < CURRENT_DATE AND (o.id IS NULL OR o.estado <> 'pendiente')"
             : "(r.created_at >= CURRENT_DATE OR o.estado = 'pendiente')");
-    $sql = "SELECT r.*, u.nombre AS tecnico, o.tipo_orden, o.estado AS orden_estado, COALESCE(NULLIF(TRIM(r.cliente_nombre), ''), o.cliente_nombre) AS cliente_nombre_actual, COALESCE(NULLIF(TRIM(r.cliente_numero), ''), o.cliente_numero) AS cliente_numero_actual, COALESCE(NULLIF(TRIM(r.ciudad), ''), o.ciudad) AS ciudad_actual, o.calle, o.numero_exterior, o.colonia, o.referencias, o.ubicacion_url, o.ip_asignada, e.tipo AS equipo_tipo, e.marca AS equipo_marca, e.modelo AS equipo_modelo, e.serial AS equipo_serial
+    $sql = "SELECT r.*, u.nombre AS tecnico, u.usuario AS tecnico_usuario, o.tipo_orden, o.estado AS orden_estado, COALESCE(NULLIF(TRIM(r.cliente_nombre), ''), o.cliente_nombre) AS cliente_nombre_actual, COALESCE(NULLIF(TRIM(r.cliente_numero), ''), o.cliente_numero) AS cliente_numero_actual, COALESCE(NULLIF(TRIM(r.ciudad), ''), o.ciudad) AS ciudad_actual, o.calle, o.numero_exterior, o.colonia, o.referencias, o.ubicacion_url, o.ip_asignada, e.tipo AS equipo_tipo, e.marca AS equipo_marca, e.modelo AS equipo_modelo, e.serial AS equipo_serial
         FROM reportes r
         JOIN usuarios u ON u.id = r.tecnico_id
         LEFT JOIN ordenes o ON o.id = r.orden_id
