@@ -345,9 +345,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_orden'])) {
                     'descripcion' => trim($_POST['descripcion'] ?? ''),
                 ]);
                 $ordenId = (int)$pdo->lastInsertId();
+                $tecnicoStmt = $pdo->prepare("SELECT usuario FROM usuarios WHERE id = :id AND rol = 'tecnico' AND activo = 1 LIMIT 1");
+                $tecnicoStmt->execute(['id' => $tecnicoId]);
+                $usuarioTecnico = $tecnicoStmt->fetchColumn();
+                if ($usuarioTecnico === false) {
+                    throw new DomainException('El técnico seleccionado no está activo.');
+                }
                 registrarActividad($pdo, 'Tienda', 'Crear orden', 'orden', $ordenId, "Orden {$tipoOrden} creada para {$clienteNombre} y asignada al técnico.");
                 $pdo->commit();
                 $mensaje = 'Orden creada y asignada al técnico. El cliente quedó guardado para futuras visitas.';
+                if (enviarNotificacionWhatsAppOrden((string)$usuarioTecnico, $ordenId, (string)$tipoOrden)) {
+                    $mensaje .= ' Se solicitó el envío del aviso de WhatsApp al técnico asignado.';
+                } else {
+                    $mensaje .= ' No se pudo enviar el aviso de WhatsApp; revisa la configuración y los logs del servidor.';
+                }
             } catch (Throwable $error) {
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();

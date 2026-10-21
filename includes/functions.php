@@ -54,6 +54,128 @@ function registrarActividad(PDO $pdo, string $modulo, string $accion, string $en
     ]);
 }
 
+function enviarNotificacionWhatsAppOrden(string $usuarioTecnico, int $ordenId, string $tipoOrden): bool
+{
+    $configuracionLocal = [];
+    $rutaConfiguracion = dirname(__DIR__) . '/config/whatsapp.local.php';
+    if (is_file($rutaConfiguracion)) {
+        $configuracionLocal = require $rutaConfiguracion;
+        if (!is_array($configuracionLocal)) {
+            error_log('WhatsApp: config/whatsapp.local.php debe devolver un arreglo.');
+            return false;
+        }
+    }
+
+    $obtenerValor = static function (string $variable, string $clave) use ($configuracionLocal): string {
+        $valorEntorno = getenv($variable);
+        if ($valorEntorno !== false && $valorEntorno !== '') {
+            return trim($valorEntorno);
+        }
+        return trim((string)($configuracionLocal[$clave] ?? ''));
+    };
+
+    $telefonos = $configuracionLocal['technician_phones'] ?? [];
+    $telefonosEntorno = getenv('WHATSAPP_TECHNICIAN_PHONES');
+    if ($telefonosEntorno !== false && $telefonosEntorno !== '') {
+        $telefonos = json_decode($telefonosEntorno, true);
+        if (!is_array($telefonos)) {
+            error_log('WhatsApp: WHATSAPP_TECHNICIAN_PHONES no contiene un objeto JSON válido.');
+            return false;
+        }
+    }
+
+    $telefono = is_array($telefonos) ? trim((string)($telefonos[$usuarioTecnico] ?? '')) : '';
+    $destinatario = preg_replace('/\D+/', '', $telefono);
+    if ($destinatario === null || !preg_match('/^52\d{10}$/', $destinatario)) {
+        error_log("WhatsApp: falta un teléfono mexicano válido para el técnico {$usuarioTecnico}.");
+        return false;
+    }
+
+    $token = $obtenerValor('WHATSAPP_ACCESS_TOKEN', 'access_token');
+    $identificadorTelefono = $obtenerValor('WHATSAPP_PHONE_NUMBER_ID', 'phone_number_id');
+    $versionApi = $obtenerValor('WHATSAPP_API_VERSION', 'api_version');
+    $plantilla = $obtenerValor('WHATSAPP_TEMPLATE_NAME', 'template_name');
+    $idioma = $obtenerValor('WHATSAPP_TEMPLATE_LANGUAGE', 'template_language');
+    if (
+        $token === ''
+        || !ctype_digit($identificadorTelefono)
+        || !preg_match('/^v\d+\.\d+$/', $versionApi)
+        || !preg_match('/^[a-z0-9_]+$/', $plantilla)
+        || $idioma === ''
+    ) {
+        error_log('WhatsApp: falta configurar las credenciales de Cloud API o la plantilla aprobada.');
+        return false;
+    }
+    if (!function_exists('curl_init')) {
+        error_log('WhatsApp: la extensión cURL de PHP no está habilitada.');
+        return false;
+    }
+
+    $tiposOrden = [
+        'retirar_equipo' => 'Retirar equipo',
+        'instalacion' => 'Instalación',
+        'cambio_domicilio' => 'Cambio de domicilio',
+        'cambio_contrasena' => 'Cambio de contraseña',
+        'reporte' => 'Reporte de cliente',
+        'retiro' => 'Retiro',
+        'recogida' => 'Recogida',
+        'revision' => 'Revisión',
+    ];
+    $cuerpo = json_encode([
+        'messaging_product' => 'whatsapp',
+        'recipient_type' => 'individual',
+        'to' => $destinatario,
+        'type' => 'template',
+        'template' => [
+            'name' => $plantilla,
+            'language' => ['code' => $idioma],
+            'components' => [[
+                'type' => 'body',
+                'parameters' => [
+                    ['type' => 'text', 'text' => $tiposOrden[$tipoOrden] ?? $tipoOrden],
+                    ['type' => 'text', 'text' => (string)$ordenId],
+                ],
+            ]],
+        ],
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($cuerpo === false) {
+        error_log('WhatsApp: no se pudo preparar el contenido de la notificación.');
+        return false;
+    }
+
+    $url = "https://graph.facebook.com/{$versionApi}/{$identificadorTelefono}/messages";
+    $curl = curl_init($url);
+    if ($curl === false) {
+        error_log('WhatsApp: no se pudo iniciar la conexión con Cloud API.');
+        return false;
+    }
+
+    curl_setopt_array($curl, [
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $cuerpo,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $token,
+            'Content-Type: application/json',
+        ],
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT => 10,
+    ]);
+    $respuesta = curl_exec($curl);
+    $errorCurl = curl_error($curl);
+    $codigoHttp = (int)curl_getinfo($curl, CURLINFO_HTTP_CODE);
+    curl_close($curl);
+
+    if ($respuesta === false || $codigoHttp < 200 || $codigoHttp >= 300) {
+        $detalle = $respuesta !== false ? json_decode($respuesta, true) : null;
+        $errorApi = is_array($detalle) ? (string)($detalle['error']['message'] ?? '') : '';
+        error_log('WhatsApp: no se pudo enviar la notificación de la orden ' . $ordenId . '. ' . ($errorApi !== '' ? $errorApi : ($errorCurl !== '' ? $errorCurl : "HTTP {$codigoHttp}")));
+        return false;
+    }
+
+    return true;
+}
+
 function getActividad(PDO $pdo, int $limite = 150): array
 {
     $limite = max(1, min($limite, 500));
