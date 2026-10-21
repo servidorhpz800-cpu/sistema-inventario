@@ -52,21 +52,11 @@ Para configurar TiDB Cloud, copia `config/database.local.example.php` como `conf
 
 Configura en el servicio web de Render las variables `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` y `DB_PASS` con los datos de tu servidor MySQL externo. Usa el puerto que indique ese proveedor (`4000` es el valor predeterminado del proyecto para TiDB Cloud; otros servidores MySQL suelen usar `3306`). `DB_NAME` debe ser la base donde se instalará el esquema, normalmente `compuser_inventario`.
 
-### Avisos de órdenes por WhatsApp
+### Notificaciones de nuevas órdenes en el navegador
 
-Al crear una orden desde Tienda, el sistema intenta enviar una notificación únicamente al técnico asignado. No envía mensajes al cliente ni a los demás técnicos. La notificación incluye el tipo de orden y su folio; el técnico consulta los datos en el sistema.
+En el panel técnico, cada técnico puede activar las notificaciones desde **Activar notificaciones** y aceptar el permiso que muestra el navegador. Después, el panel consulta si hay órdenes nuevas asignadas a ese técnico cada 15 segundos y muestra una notificación del sistema con el tipo de trabajo y el folio. No hace falta WhatsApp ni una API externa.
 
-El envío automático requiere **WhatsApp Business Platform/Cloud API**; la aplicación WhatsApp Business por sí sola no permite enviar automáticamente desde el servidor. Registra el número principal de la tienda en Cloud API y confirma con Meta si ese número puede seguir usándose en la aplicación mediante coexistencia antes de conectarlo. También necesitas un token de acceso, el **Phone Number ID**, una versión vigente de Graph API y una plantilla aprobada por WhatsApp.
-
-Crea y aprueba una plantilla de utilidad en español de México, con el nombre `orden_asignada` y dos variables en el cuerpo. Por ejemplo:
-
-```text
-Nueva orden asignada. Tipo: {{1}}. Folio: {{2}}. Consulta los detalles en el sistema.
-```
-
-En XAMPP, copia `config/whatsapp.local.example.php` como `config/whatsapp.local.php` y completa el token, Phone Number ID y versión vigente de Graph API. La configuración local ya incluye los teléfonos de los técnicos en formato internacional de México (+52), asociados a sus nombres de usuario; no agregues el teléfono del cliente. Ese archivo está excluido de Git. Habilita también `extension=curl` en `php.ini` y reinicia Apache. En Render configura `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_API_VERSION`, `WHATSAPP_TEMPLATE_NAME` y `WHATSAPP_TEMPLATE_LANGUAGE` como variables de entorno; configura además `WHATSAPP_TECHNICIAN_PHONES` como un objeto JSON con usuario y teléfono, por ejemplo `{"jorge":"+52XXXXXXXXXX","kevin":"+52XXXXXXXXXX"}`. Los valores de entorno tienen prioridad sobre la configuración local.
-
-Si WhatsApp no está configurado o Meta rechaza el envío, la orden igualmente se guarda y Tienda muestra que el aviso no se envió; el motivo técnico queda en el log de PHP. Para poder enviar en Docker, la imagen habilita la extensión PHP cURL.
+El panel debe permanecer abierto y con la sesión iniciada para consultar nuevas órdenes; no se envían avisos cuando el navegador está cerrado. El sitio debe abrirse por HTTPS o desde `localhost`, y el navegador debe admitir notificaciones. Si el permiso se bloqueó, se debe habilitar desde los permisos del sitio en el navegador. Las notificaciones se solicitan mediante el botón del panel, no al entrar automáticamente al sitio.
 
 Render ejecuta la aplicación, pero el esquema no se importa automáticamente. Con un cliente MySQL conectado a esa misma base y servidor, importa `database/schema.sql` una sola vez con una cuenta que tenga permisos para crear tablas e insertar los usuarios iniciales. Después verifica que exista `usuarios` (por ejemplo, con `SHOW TABLES;`). No ejecutes el esquema repetidamente sobre una instalación existente.
 

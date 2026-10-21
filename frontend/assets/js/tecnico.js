@@ -1,3 +1,124 @@
+const notificacionesOrdenes = document.getElementById('notificacionesOrdenes');
+if (notificacionesOrdenes && 'Notification' in window && 'fetch' in window) {
+    const botonNotificaciones = document.getElementById('activarNotificacionesOrdenes');
+    const estadoNotificaciones = document.getElementById('estadoNotificacionesOrdenes');
+    let ultimaOrdenId = Number.parseInt(notificacionesOrdenes.dataset.sinceId || '0', 10);
+    let temporizadorNotificaciones;
+    let consultaEnCurso = false;
+
+    const actualizarEstadoNotificaciones = (mensaje) => {
+        if (estadoNotificaciones) {
+            estadoNotificaciones.textContent = mensaje;
+        }
+    };
+
+    const mostrarAvisoOrden = (orden) => {
+        const tiposOrden = {
+            retirar_equipo: 'Retirar equipo',
+            instalacion: 'Instalación',
+            cambio_domicilio: 'Cambio de domicilio',
+            cambio_contrasena: 'Cambio de contraseña',
+            reporte: 'Reporte de cliente',
+            retiro: 'Retiro',
+            recogida: 'Recogida',
+            revision: 'Revisión',
+        };
+        const tipo = tiposOrden[orden.tipo_orden] || 'Nueva orden';
+        const aviso = new Notification('Nueva orden asignada', {
+            body: `${tipo} · Folio #${orden.id}`,
+            tag: `orden-${orden.id}`,
+        });
+        aviso.addEventListener('click', () => {
+            window.focus();
+            aviso.close();
+            window.location.reload();
+        });
+    };
+
+    const consultarNuevasOrdenes = async () => {
+        if (consultaEnCurso || Notification.permission !== 'granted') {
+            return;
+        }
+        consultaEnCurso = true;
+        try {
+            const respuesta = await fetch(
+                `${notificacionesOrdenes.dataset.endpoint}?after=${encodeURIComponent(ultimaOrdenId)}`,
+                { credentials: 'same-origin', cache: 'no-store' },
+            );
+            if (!respuesta.ok) {
+                throw new Error(`HTTP ${respuesta.status}`);
+            }
+            const datos = await respuesta.json();
+            if (!Array.isArray(datos.ordenes)) {
+                throw new Error('Respuesta de notificaciones inválida.');
+            }
+            datos.ordenes.forEach((orden) => {
+                const id = Number.parseInt(orden.id, 10);
+                if (!Number.isInteger(id) || id <= ultimaOrdenId) {
+                    return;
+                }
+                ultimaOrdenId = id;
+                mostrarAvisoOrden(orden);
+            });
+        } catch (error) {
+            console.error('No se pudieron consultar las nuevas órdenes.', error);
+            actualizarEstadoNotificaciones('No se pudieron consultar las órdenes. Revisa tu conexión.');
+        } finally {
+            consultaEnCurso = false;
+        }
+    };
+
+    const iniciarConsultaNotificaciones = () => {
+        if (temporizadorNotificaciones) {
+            return;
+        }
+        if (botonNotificaciones) {
+            botonNotificaciones.textContent = 'Notificaciones activas';
+            botonNotificaciones.disabled = true;
+        }
+        actualizarEstadoNotificaciones('Notificaciones activas. Revisa las órdenes aproximadamente cada 15 segundos.');
+        consultarNuevasOrdenes();
+        temporizadorNotificaciones = window.setInterval(consultarNuevasOrdenes, 15000);
+    };
+
+    if (!window.isSecureContext) {
+        actualizarEstadoNotificaciones('Las notificaciones requieren HTTPS o abrir el sistema desde localhost.');
+        if (botonNotificaciones) {
+            botonNotificaciones.disabled = true;
+        }
+    } else if (Notification.permission === 'granted') {
+        iniciarConsultaNotificaciones();
+    } else if (Notification.permission === 'denied') {
+        actualizarEstadoNotificaciones('El permiso está bloqueado. Habilítalo en la configuración del navegador para este sitio.');
+        if (botonNotificaciones) {
+            botonNotificaciones.disabled = true;
+        }
+    } else if (botonNotificaciones) {
+        botonNotificaciones.addEventListener('click', async () => {
+            botonNotificaciones.disabled = true;
+            try {
+                const permiso = await Notification.requestPermission();
+                if (permiso === 'granted') {
+                    iniciarConsultaNotificaciones();
+                } else {
+                    actualizarEstadoNotificaciones('No se concedió el permiso para mostrar notificaciones.');
+                }
+            } finally {
+                botonNotificaciones.disabled = Notification.permission !== 'default';
+            }
+        });
+    }
+} else if (notificacionesOrdenes) {
+    const estadoNotificaciones = document.getElementById('estadoNotificacionesOrdenes');
+    const botonNotificaciones = document.getElementById('activarNotificacionesOrdenes');
+    if (estadoNotificaciones) {
+        estadoNotificaciones.textContent = 'Este navegador no admite notificaciones del sistema.';
+    }
+    if (botonNotificaciones) {
+        botonNotificaciones.disabled = true;
+    }
+}
+
 const filtroOrdenes = document.getElementById('filtroOrdenes');
         if (filtroOrdenes) {
             filtroOrdenes.addEventListener('change', () => {

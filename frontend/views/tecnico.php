@@ -48,6 +48,17 @@
                 <div class="alert alert-<?php echo htmlspecialchars($tipoMensaje); ?>"><?php echo htmlspecialchars($mensaje); ?></div>
             <?php endif; ?>
 
+            <?php if (!$esAdmin): ?>
+                <section class="card" id="notificacionesOrdenes"
+                    data-endpoint="notificaciones.php"
+                    data-since-id="<?php echo (int)$ultimoIdOrdenNotificacion; ?>">
+                    <h3>Avisos de nuevas órdenes</h3>
+                    <p>Activa las notificaciones para recibir un aviso cuando te asignen una orden.</p>
+                    <button type="button" class="btn btn-secondary" id="activarNotificacionesOrdenes">Activar notificaciones</button>
+                    <p id="estadoNotificacionesOrdenes" role="status" aria-live="polite"></p>
+                </section>
+            <?php endif; ?>
+
             <div class="content-grid">
                 <div class="card">
                     <div class="orders-toolbar">

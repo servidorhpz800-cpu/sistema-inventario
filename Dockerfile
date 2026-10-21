@@ -1,7 +1,7 @@
 FROM php:8.1-apache
 
-# Instalar extensiones para la conexión a TiDB Cloud y WhatsApp Cloud API
-RUN docker-php-ext-install pdo pdo_mysql curl
+# Instalar extensión PDO MySQL para la conexión a TiDB Cloud
+RUN docker-php-ext-install pdo pdo_mysql
 
 # Habilitar mod_rewrite de Apache
 RUN a2enmod rewrite
