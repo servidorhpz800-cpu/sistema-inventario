@@ -334,6 +334,6 @@
             </div>
         </div>
     </div>
-    <script src="frontend/assets/js/tecnico.js" defer></script>
+    <script src="frontend/assets/js/tecnico.js?v=20261021-1" defer></script>
 </body>
 </html>

@@ -1,14 +1,32 @@
 const notificacionesOrdenes = document.getElementById('notificacionesOrdenes');
-if (notificacionesOrdenes && 'Notification' in window && 'fetch' in window) {
+if (notificacionesOrdenes) {
     const botonNotificaciones = document.getElementById('activarNotificacionesOrdenes');
     const estadoNotificaciones = document.getElementById('estadoNotificacionesOrdenes');
     let ultimaOrdenId = Number.parseInt(notificacionesOrdenes.dataset.sinceId || '0', 10);
     let temporizadorNotificaciones;
     let consultaEnCurso = false;
+    const notificacionesDisponibles = 'Notification' in window;
 
     const actualizarEstadoNotificaciones = (mensaje) => {
         if (estadoNotificaciones) {
             estadoNotificaciones.textContent = mensaje;
+        }
+    };
+
+    const actualizarInterfazPermiso = () => {
+        if (!notificacionesDisponibles || !botonNotificaciones) {
+            return;
+        }
+        if (Notification.permission === 'granted') {
+            iniciarConsultaNotificaciones();
+        } else if (Notification.permission === 'denied') {
+            botonNotificaciones.disabled = true;
+            actualizarEstadoNotificaciones('El permiso está bloqueado para este sitio. Cámbialo en el icono junto a la dirección del navegador y vuelve a cargar la página.');
+        } else if (!window.isSecureContext) {
+            actualizarEstadoNotificaciones('El navegador solo permite notificaciones en HTTPS o al abrir el sistema desde localhost.');
+        } else {
+            botonNotificaciones.disabled = false;
+            actualizarEstadoNotificaciones('Pulsa el botón para que el navegador te pregunte si permites las notificaciones.');
         }
     };
 
@@ -81,41 +99,51 @@ if (notificacionesOrdenes && 'Notification' in window && 'fetch' in window) {
         temporizadorNotificaciones = window.setInterval(consultarNuevasOrdenes, 15000);
     };
 
-    if (!window.isSecureContext) {
-        actualizarEstadoNotificaciones('Las notificaciones requieren HTTPS o abrir el sistema desde localhost.');
+    if (!notificacionesDisponibles || !('fetch' in window)) {
+        actualizarEstadoNotificaciones('Este navegador no admite notificaciones del sistema.');
         if (botonNotificaciones) {
             botonNotificaciones.disabled = true;
         }
-    } else if (Notification.permission === 'granted') {
-        iniciarConsultaNotificaciones();
-    } else if (Notification.permission === 'denied') {
-        actualizarEstadoNotificaciones('El permiso está bloqueado. Habilítalo en la configuración del navegador para este sitio.');
-        if (botonNotificaciones) {
-            botonNotificaciones.disabled = true;
-        }
-    } else if (botonNotificaciones) {
-        botonNotificaciones.addEventListener('click', async () => {
-            botonNotificaciones.disabled = true;
-            try {
-                const permiso = await Notification.requestPermission();
-                if (permiso === 'granted') {
-                    iniciarConsultaNotificaciones();
-                } else {
-                    actualizarEstadoNotificaciones('No se concedió el permiso para mostrar notificaciones.');
+    } else {
+        actualizarInterfazPermiso();
+        if (botonNotificaciones && Notification.permission === 'default') {
+            botonNotificaciones.addEventListener('click', (event) => {
+                event.preventDefault();
+                if (!window.isSecureContext) {
+                    actualizarEstadoNotificaciones('No se pudo mostrar el permiso: abre el sistema con HTTPS o desde localhost y vuelve a intentarlo.');
+                    return;
                 }
-            } finally {
-                botonNotificaciones.disabled = Notification.permission !== 'default';
+
+                let solicitudPermiso;
+                try {
+                    solicitudPermiso = Notification.requestPermission();
+                } catch (error) {
+                    console.error('El navegador no pudo solicitar permiso para notificaciones.', error);
+                    actualizarEstadoNotificaciones('El navegador no pudo mostrar el permiso. Revisa la configuración de notificaciones del sitio.');
+                    return;
+                }
+
+                botonNotificaciones.disabled = true;
+                actualizarEstadoNotificaciones('Esperando tu respuesta al permiso del navegador...');
+                Promise.resolve(solicitudPermiso)
+                    .then((permiso) => {
+                        if (permiso === 'granted') {
+                            iniciarConsultaNotificaciones();
+                        } else if (permiso === 'denied') {
+                            actualizarEstadoNotificaciones('Se bloqueó el permiso. Cámbialo en el icono junto a la dirección del navegador y vuelve a cargar la página.');
+                        } else {
+                            actualizarEstadoNotificaciones('No se concedió el permiso. Puedes pulsar el botón para intentarlo otra vez.');
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('No se pudo completar la solicitud de permiso de notificaciones.', error);
+                        actualizarEstadoNotificaciones('No se pudo solicitar el permiso. Revisa la configuración del navegador y vuelve a intentarlo.');
+                    })
+                    .finally(() => {
+                        botonNotificaciones.disabled = Notification.permission !== 'default';
+                    });
             }
-        });
-    }
-} else if (notificacionesOrdenes) {
-    const estadoNotificaciones = document.getElementById('estadoNotificacionesOrdenes');
-    const botonNotificaciones = document.getElementById('activarNotificacionesOrdenes');
-    if (estadoNotificaciones) {
-        estadoNotificaciones.textContent = 'Este navegador no admite notificaciones del sistema.';
-    }
-    if (botonNotificaciones) {
-        botonNotificaciones.disabled = true;
+        }
     }
 }
 
