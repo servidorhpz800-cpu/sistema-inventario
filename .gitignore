@@ -1,4 +1,5 @@
 /config/database.local.php
 /config/whatsapp.local.php
+/vendor/
 /uploads/reportes/*
 !/uploads/reportes/.gitkeep

@@ -126,6 +126,142 @@ function getReportesUploadDirectory(): string
     return rtrim($directorioConfigurado, '/\\') ?: DIRECTORY_SEPARATOR;
 }
 
+function isReportStorageR2Enabled(): bool
+{
+    $driver = strtolower(trim((string)(getenv('COMPUSER_STORAGE_DRIVER') ?: 'local')));
+    if (!in_array($driver, ['local', 'r2'], true)) {
+        throw new RuntimeException('COMPUSER_STORAGE_DRIVER debe ser local o r2.');
+    }
+
+    return $driver === 'r2';
+}
+
+function getReportesR2Client(): \Aws\S3\S3Client
+{
+    $autoload = dirname(__DIR__) . '/vendor/autoload.php';
+    if (!class_exists(\Aws\S3\S3Client::class) && is_file($autoload)) {
+        require_once $autoload;
+    }
+    if (!class_exists(\Aws\S3\S3Client::class)) {
+        throw new RuntimeException('No está instalada la dependencia AWS SDK para conectar con R2.');
+    }
+
+    $endpoint = trim((string)getenv('COMPUSER_R2_ENDPOINT'));
+    $bucket = trim((string)getenv('COMPUSER_R2_BUCKET'));
+    $accessKey = trim((string)getenv('COMPUSER_R2_ACCESS_KEY_ID'));
+    $secretKey = trim((string)getenv('COMPUSER_R2_SECRET_ACCESS_KEY'));
+    if (
+        filter_var($endpoint, FILTER_VALIDATE_URL) === false
+        || parse_url($endpoint, PHP_URL_SCHEME) !== 'https'
+        || $bucket === ''
+        || $accessKey === ''
+        || $secretKey === ''
+    ) {
+        throw new RuntimeException('Configura COMPUSER_R2_ENDPOINT, COMPUSER_R2_BUCKET, COMPUSER_R2_ACCESS_KEY_ID y COMPUSER_R2_SECRET_ACCESS_KEY.');
+    }
+
+    return new \Aws\S3\S3Client([
+        'version' => 'latest',
+        'region' => 'auto',
+        'endpoint' => $endpoint,
+        'use_path_style_endpoint' => true,
+        'credentials' => [
+            'key' => $accessKey,
+            'secret' => $secretKey,
+        ],
+    ]);
+}
+
+function getReportEvidenceKey(string $filename): string
+{
+    if (preg_match('/\A[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}\.(?:jpe?g|png|webp)\z/i', $filename) !== 1) {
+        throw new InvalidArgumentException('El nombre de la evidencia no es válido.');
+    }
+
+    return 'reportes/' . $filename;
+}
+
+function storeReportEvidenceFile(string $temporaryPath, string $filename, string $contentType): void
+{
+    if (isReportStorageR2Enabled()) {
+        $body = fopen($temporaryPath, 'rb');
+        if ($body === false) {
+            throw new RuntimeException('No se pudo leer una imagen temporal.');
+        }
+
+        try {
+            getReportesR2Client()->putObject([
+                'Bucket' => trim((string)getenv('COMPUSER_R2_BUCKET')),
+                'Key' => getReportEvidenceKey($filename),
+                'Body' => $body,
+                'ContentType' => $contentType,
+            ]);
+        } finally {
+            fclose($body);
+        }
+
+        return;
+    }
+
+    $directory = getReportesUploadDirectory();
+    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
+        throw new RuntimeException('No se pudo crear el directorio de evidencias.');
+    }
+    if (!move_uploaded_file($temporaryPath, $directory . DIRECTORY_SEPARATOR . $filename)) {
+        throw new RuntimeException('No se pudo guardar una de las evidencias.');
+    }
+}
+
+function getLocalReportEvidencePath(string $filename): ?string
+{
+    $directories = array_unique([
+        getReportesUploadDirectory(),
+        dirname(__DIR__) . '/uploads/reportes',
+    ]);
+    foreach ($directories as $directory) {
+        $candidate = $directory . DIRECTORY_SEPARATOR . $filename;
+        if (is_file($candidate) && is_readable($candidate)) {
+            return $candidate;
+        }
+    }
+
+    return null;
+}
+
+function getReportEvidenceFromR2(string $filename): ?array
+{
+    if (!isReportStorageR2Enabled()) {
+        return null;
+    }
+
+    try {
+        return getReportesR2Client()->getObject([
+            'Bucket' => trim((string)getenv('COMPUSER_R2_BUCKET')),
+            'Key' => getReportEvidenceKey($filename),
+        ])->toArray();
+    } catch (\Aws\S3\Exception\S3Exception $error) {
+        if ($error->getStatusCode() === 404) {
+            return null;
+        }
+        throw $error;
+    }
+}
+
+function deleteReportEvidenceFile(string $filename): void
+{
+    if (isReportStorageR2Enabled()) {
+        getReportesR2Client()->deleteObject([
+            'Bucket' => trim((string)getenv('COMPUSER_R2_BUCKET')),
+            'Key' => getReportEvidenceKey($filename),
+        ]);
+    }
+
+    $localPath = getLocalReportEvidencePath($filename);
+    if ($localPath !== null && !unlink($localPath)) {
+        throw new RuntimeException('No se pudo borrar el archivo local de evidencia.');
+    }
+}
+
 function urlEvidenciaReporte(string $ruta): string
 {
     if (preg_match('/^https?:\/\//i', $ruta) === 1) {

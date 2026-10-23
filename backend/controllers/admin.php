@@ -40,13 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_delete_action']
             $eliminacionConfirmada = false;
 
             try {
-                $directoriosEvidencia = [];
-                if ($accionEliminar === 'report') {
-                    $directoriosEvidencia = array_unique([
-                        getReportesUploadDirectory(),
-                        dirname(__DIR__, 2) . '/uploads/reportes',
-                    ]);
-                }
                 $pdo->beginTransaction();
 
                 if ($accionEliminar === 'report') {
@@ -83,19 +76,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_delete_action']
                     $noSePudieronBorrarEvidencias = false;
 
                     foreach ($rutasEvidenciaEliminar as $rutaEvidencia) {
-                        $nombreArchivoEvidencia = basename(str_replace('\\', '/', $rutaEvidencia));
                         $referenciaEvidencia = $pdo->prepare('SELECT 1 FROM reportes WHERE foto_url = ? UNION ALL SELECT 1 FROM reporte_evidencias WHERE foto_url = ? LIMIT 1');
                         $referenciaEvidencia->execute([$rutaEvidencia, $rutaEvidencia]);
                         if ($referenciaEvidencia->fetchColumn()) {
                             continue;
                         }
 
-                        foreach ($directoriosEvidencia as $directorioEvidencia) {
-                            $archivoEvidencia = $directorioEvidencia . DIRECTORY_SEPARATOR . $nombreArchivoEvidencia;
-                            if (is_file($archivoEvidencia) && !unlink($archivoEvidencia)) {
-                                $noSePudieronBorrarEvidencias = true;
-                                error_log('No se pudo borrar el archivo de evidencia: ' . $archivoEvidencia);
-                            }
+                        try {
+                            deleteReportEvidenceFile(basename(str_replace('\\', '/', $rutaEvidencia)));
+                        } catch (Throwable $errorLimpieza) {
+                            $noSePudieronBorrarEvidencias = true;
+                            error_log('No se pudo borrar una evidencia del reporte: ' . $errorLimpieza->getMessage());
                         }
                     }
 

@@ -42,7 +42,7 @@ post_max_size = 128M
 max_file_uploads = 20
 ```
 
-Guarda el archivo y reinicia Apache. `post_max_size` debe ser mayor que `upload_max_filesize` porque cubre el envío completo del formulario y todas sus imágenes. Mantén respaldos de `uploads/reportes/` junto con los de la base de datos; si cambias de servidor, copia también esa carpeta o configura `COMPUSER_REPORTES_DIR` con una ruta absoluta y persistente.
+Guarda el archivo y reinicia Apache. `post_max_size` debe ser mayor que `upload_max_filesize` porque cubre el envío completo del formulario y todas sus imágenes. Si usas almacenamiento local, mantén respaldos de `uploads/reportes/` junto con los de la base de datos; si cambias de servidor, copia también esa carpeta o configura `COMPUSER_REPORTES_DIR` con una ruta absoluta y persistente. Para Render, configura R2 como se indica en la sección de almacenamiento más adelante.
 
 ## Base de datos central
 
@@ -86,15 +86,19 @@ Si ya tienes datos, haz primero un respaldo. No vuelvas a importar el esquema so
 
 Para habilitar el nuevo domicilio y los datos del servicio en una instalación existente, haz un respaldo y ejecuta los comandos SQL de `prueba_txt` antes de desplegar el código actualizado. Cambia `titulo` a `domicilio_calles` solo si esa columna todavía se llama `titulo`; si ya se cambió, deja comentada esa instrucción. Las columnas nuevas se agregan de una en una y se pueden volver a ejecutar si una migración se interrumpe.
 
-Las fotos de reportes, las firmas de clientes y las evidencias de instalaciones se guardan como archivos; la base central conserva sus nombres. La aplicación no borra evidencias por antigüedad y las sirve mediante `evidencia.php`. Para que sobrevivan reinicios y nuevos despliegues, configura `COMPUSER_REPORTES_DIR` con una ruta absoluta en un disco persistente montado en el servidor. En Render, monta un Persistent Disk (por ejemplo en `/var/data`) y agrega la variable `COMPUSER_REPORTES_DIR=/var/data/compuser/reportes`; concede permisos de escritura a Apache (`www-data`). Antes de desplegar con el disco nuevo, haz un respaldo y copia las evidencias existentes desde `/var/www/html/uploads/reportes/` al directorio persistente:
+Las fotos de reportes se guardan como archivos y la base central conserva sus nombres. La aplicación puede guardarlas localmente o en un bucket privado de Cloudflare R2. Para Render con R2, agrega estas variables en **Environment** del servicio:
 
-```sh
-mkdir -p /var/data/compuser/reportes
-cp -a /var/www/html/uploads/reportes/. /var/data/compuser/reportes/
-chown -R www-data:www-data /var/data/compuser/reportes
-```
+| Variable | Valor |
+| --- | --- |
+| `COMPUSER_STORAGE_DRIVER` | `r2` |
+| `COMPUSER_R2_ENDPOINT` | `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` |
+| `COMPUSER_R2_BUCKET` | nombre exacto del bucket |
+| `COMPUSER_R2_ACCESS_KEY_ID` | Access Key ID del token R2 |
+| `COMPUSER_R2_SECRET_ACCESS_KEY` | Secret Access Key del token R2 |
 
-Si ejecutas más de un servidor web, la ruta debe apuntar a almacenamiento compartido entre todos ellos. Sin disco persistente, el directorio predeterminado bajo `uploads/reportes` puede perder sus archivos al reemplazarse el contenedor o el servidor. No se guardan imágenes binarias en MySQL para evitar inflar y ralentizar la base. La aplicación permite imágenes de hasta 20 MB cada una, sujetas también a los límites de PHP y del servidor web. Al enviar un reporte técnico con ubicación GPS, la ciudad y el enlace del mapa se actualizan en el registro del cliente y en la orden relacionada para reutilizarlos en futuras visitas.
+Usa un token con permiso **Object Read & Write** limitado a ese bucket, conserva el bucket privado y no compartas ni subas las claves al repositorio. La app utiliza la región S3 `auto` y sirve cada imagen autenticando al usuario en `evidencia.php`; no necesita hacer público el bucket. Después de agregar las variables, guarda los cambios y espera a que termine el nuevo despliegue. Los reportes nuevos subirán sus imágenes a R2; las imágenes antiguas que aún estén en el disco local se seguirán buscando allí, pero deben copiarse a R2 para que sobrevivan al reemplazo del contenedor.
+
+En instalaciones locales, si `COMPUSER_STORAGE_DRIVER` no está definido, las imágenes continúan guardándose en `uploads/reportes/`. No se guardan imágenes binarias en MySQL. La aplicación permite imágenes de hasta 20 MB cada una, sujetas también a los límites de PHP y del servidor web. Al enviar un reporte técnico con ubicación GPS, la ciudad y el enlace del mapa se actualizan en el registro del cliente y en la orden relacionada para reutilizarlos en futuras visitas.
 
 ## Funcionalidades
 

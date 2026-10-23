@@ -136,7 +136,6 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
     $fotoUrl = null;
     $fotosTemporales = [];
     $fotosGuardadas = [];
-    $directorioFotos = null;
 
     $subidaFotos = $_FILES['foto_reporte'] ?? null;
     if ($subidaFotos !== null) {
@@ -173,7 +172,7 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
                 $tipoMensaje = 'danger';
                 break;
             }
-            $fotosTemporales[] = ['tmp_name' => $tmpFoto, 'extension' => $extensiones[$mime]];
+            $fotosTemporales[] = ['tmp_name' => $tmpFoto, 'extension' => $extensiones[$mime], 'mime' => $mime];
         }
     }
 
@@ -261,15 +260,9 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
                 ? (int)$movimientoReporte['equipo_id']
                 : ($equipoDeOrden !== null ? (int)$equipoDeOrden : null);
 
-            $directorioFotos = getReportesUploadDirectory();
-            if ($fotosTemporales && !is_dir($directorioFotos) && !mkdir($directorioFotos, 0755, true) && !is_dir($directorioFotos)) {
-                throw new RuntimeException('No se pudo crear el directorio de evidencias.');
-            }
             foreach ($fotosTemporales as $fotoTemporal) {
                 $nombreFoto = bin2hex(random_bytes(16)) . '.' . $fotoTemporal['extension'];
-                if (!move_uploaded_file($fotoTemporal['tmp_name'], $directorioFotos . '/' . $nombreFoto)) {
-                    throw new RuntimeException('No se pudo guardar una de las evidencias.');
-                }
+                storeReportEvidenceFile($fotoTemporal['tmp_name'], $nombreFoto, $fotoTemporal['mime']);
                 $fotosGuardadas[] = $nombreFoto;
             }
             $fotoUrl = $fotosGuardadas[0] ?? null;
@@ -335,11 +328,10 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
                 $pdo->rollBack();
             }
             foreach ($fotosGuardadas as $archivoGuardado) {
-                $rutaFotoGuardada = $directorioFotos !== null
-                    ? $directorioFotos . DIRECTORY_SEPARATOR . basename($archivoGuardado)
-                    : null;
-                if ($rutaFotoGuardada !== null && is_file($rutaFotoGuardada)) {
-                    unlink($rutaFotoGuardada);
+                try {
+                    deleteReportEvidenceFile(basename($archivoGuardado));
+                } catch (Throwable $errorLimpieza) {
+                    error_log('No se pudo limpiar una evidencia de reporte: ' . $errorLimpieza->getMessage());
                 }
             }
             error_log('No se pudo guardar el reporte técnico: ' . $error->getMessage());
