@@ -9,6 +9,19 @@ const inventoryAdmin = window.inventoryAdminData;
         const buscarClienteAdmin = document.getElementById('buscarCliente');
         const filasClientesAdmin = Array.from(document.querySelectorAll('#tablaClientes tr[data-client-search]'));
         const sinClientesFiltradosAdmin = document.getElementById('sinClientesFiltrados');
+        document.querySelectorAll('[data-admin-order-toggle]').forEach((toggle) => {
+            toggle.addEventListener('click', () => {
+                const details = document.getElementById(toggle.getAttribute('aria-controls'));
+                if (!details) {
+                    return;
+                }
+
+                const expanded = toggle.getAttribute('aria-expanded') === 'true';
+                toggle.setAttribute('aria-expanded', String(!expanded));
+                toggle.textContent = `Orden #${toggle.dataset.orderId} · ${expanded ? 'Ver detalles' : 'Ocultar detalles'}`;
+                details.hidden = expanded;
+            });
+        });
 
         buscarClienteAdmin?.addEventListener('input', () => {
             const termino = buscarClienteAdmin.value.trim().toLocaleLowerCase();

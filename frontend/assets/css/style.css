@@ -290,6 +290,39 @@ button, input, select, textarea {
     margin-top: 22px;
 }
 
+.admin-order-toggle {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--primary);
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+}
+
+.admin-order-toggle:hover,
+.admin-order-toggle:focus-visible {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+.admin-order-detail-row[hidden] {
+    display: none;
+}
+
+.admin-order-detail {
+    padding: 8px;
+}
+
+.admin-order-detail > h4 {
+    margin: 8px 0;
+}
+
+.admin-order-reports-heading {
+    margin-top: 20px !important;
+}
+
 .report-summary .orders-toolbar h3 {
     margin-top: 4px;
 }

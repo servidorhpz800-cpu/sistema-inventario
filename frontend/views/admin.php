@@ -9,6 +9,7 @@
 /** @var array $usuarios */
 /** @var array $reportes */
 /** @var array $ordenes */
+/** @var array $reportesPorOrden */
 /** @var array $clientes */
 /** @var array $resumenReportesClientes */
 /** @var array $movimientosTecnico */
@@ -25,6 +26,7 @@ if (!isset(
     $usuarios,
     $reportes,
     $ordenes,
+    $reportesPorOrden,
     $clientes,
     $resumenReportesClientes,
     $movimientosTecnico,
@@ -475,19 +477,85 @@ if (!isset(
                                 <tr><td colspan="6">No hay órdenes registradas.</td></tr>
                             <?php else: ?>
                                 <?php foreach ($ordenes as $orden): ?>
+                                    <?php
+                                    $ordenId = (int)$orden['id'];
+                                    $reportesOrden = $reportesPorOrden[$ordenId] ?? [];
+                                    $direccionOrden = implode(', ', array_filter([
+                                        trim(($orden['calle'] ?? '') . ' ' . ($orden['numero_exterior'] ?? '')),
+                                        $orden['colonia'] ?? '',
+                                        $orden['ciudad'] ?? '',
+                                    ]));
+                                    $urlMapaOrden = $orden['ubicacion_url'] ?: ($direccionOrden !== ''
+                                        ? 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($direccionOrden)
+                                        : '');
+                                    $detalleOrdenId = 'detalle-orden-' . $ordenId;
+                                    ?>
                                     <tr>
-                                        <td>#<?php echo (int)$orden['id']; ?></td>
+                                        <td><button type="button" class="admin-order-toggle" data-admin-order-toggle data-order-id="<?php echo $ordenId; ?>" aria-expanded="false" aria-controls="<?php echo $detalleOrdenId; ?>">Orden #<?php echo $ordenId; ?> · Ver detalles</button></td>
                                         <td><?php echo htmlspecialchars(date('d/m/Y H:i', strtotime($orden['created_at']))); ?></td>
                                         <td><?php echo htmlspecialchars($orden['tecnico']); ?></td>
                                         <td><?php echo htmlspecialchars($orden['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($orden['cliente_numero'] ?: 'Sin número'); ?></td>
                                         <td><?php echo htmlspecialchars(str_replace('_', ' ', $orden['tipo_orden'])); ?><br><span class="badge <?php echo badgeClass($orden['estado']); ?>"><?php echo htmlspecialchars($orden['estado']); ?></span></td>
                                         <td>
-                                            <form method="POST" onsubmit="return confirm('¿Eliminar definitivamente la orden #<?php echo (int)$orden['id']; ?>? Los reportes y movimientos relacionados conservarán sus datos, pero dejarán de estar vinculados a esta orden.');">
+                                            <form method="POST" onsubmit="return confirm('¿Eliminar definitivamente la orden #<?php echo $ordenId; ?>? Los reportes y movimientos relacionados conservarán sus datos, pero dejarán de estar vinculados a esta orden.');">
                                                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($adminCsrfToken, ENT_QUOTES, 'UTF-8'); ?>">
                                                 <input type="hidden" name="admin_delete_action" value="order">
-                                                <input type="hidden" name="record_id" value="<?php echo (int)$orden['id']; ?>">
+                                                <input type="hidden" name="record_id" value="<?php echo $ordenId; ?>">
                                                 <button type="submit" class="btn btn-danger">Eliminar</button>
                                             </form>
+                                        </td>
+                                    </tr>
+                                    <tr id="<?php echo $detalleOrdenId; ?>" class="admin-order-detail-row" hidden>
+                                        <td colspan="6">
+                                            <section class="admin-order-detail">
+                                                <h4>Detalles de la orden #<?php echo $ordenId; ?></h4>
+                                                <div class="order-facts">
+                                                    <div><span>Fecha de registro</span><?php echo htmlspecialchars(date('d/m/Y H:i', strtotime($orden['created_at']))); ?></div>
+                                                    <div><span>Última actualización</span><?php echo htmlspecialchars(date('d/m/Y H:i', strtotime($orden['updated_at']))); ?></div>
+                                                    <div><span>Técnico</span><?php echo htmlspecialchars($orden['tecnico']); ?></div>
+                                                    <div><span>Tipo de servicio</span><?php echo htmlspecialchars(str_replace('_', ' ', ucfirst($orden['tipo_orden']))); ?></div>
+                                                    <div><span>Estado</span><span class="badge <?php echo badgeClass($orden['estado']); ?>"><?php echo htmlspecialchars(str_replace('_', ' ', $orden['estado'])); ?></span></div>
+                                                    <div><span>Cliente</span><?php echo htmlspecialchars($orden['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($orden['cliente_numero'] ?: 'Sin teléfono'); ?></div>
+                                                    <div><span>Ciudad</span><?php echo htmlspecialchars($orden['ciudad'] ?: 'Sin ciudad'); ?></div>
+                                                    <div><span>Domicilio</span><?php echo htmlspecialchars($direccionOrden ?: 'Sin domicilio registrado'); ?></div>
+                                                    <div><span>Referencias</span><?php echo htmlspecialchars($orden['referencias'] ?: 'Sin referencias'); ?></div>
+                                                    <div><span>IP asignada</span><?php echo htmlspecialchars($orden['ip_asignada'] ?: 'Sin IP'); ?></div>
+                                                    <div><span>Equipo</span><?php echo htmlspecialchars(trim(($orden['equipo_tipo'] ?? '') . ' ' . ($orden['equipo_marca'] ?? '') . ' ' . ($orden['equipo_modelo'] ?? '') . ' ' . ($orden['equipo_serial'] ?? '')) ?: 'Sin equipo asignado'); ?></div>
+                                                </div>
+                                                <?php if ($urlMapaOrden !== ''): ?>
+                                                    <a href="<?php echo htmlspecialchars($urlMapaOrden, ENT_QUOTES); ?>" target="_blank" rel="noopener" class="btn btn-secondary">Abrir ubicación en mapa</a>
+                                                <?php endif; ?>
+                                                <?php if (!empty($orden['descripcion'])): ?>
+                                                    <p class="order-description"><strong>Indicaciones de la orden:</strong> <?php echo htmlspecialchars($orden['descripcion']); ?></p>
+                                                <?php endif; ?>
+                                                <?php if (!empty($orden['motivo_cancelacion'])): ?>
+                                                    <p class="order-description"><strong>Motivo de cancelación:</strong> <?php echo htmlspecialchars($orden['motivo_cancelacion']); ?></p>
+                                                <?php endif; ?>
+                                                <h4 class="admin-order-reports-heading">Reportes técnicos vinculados</h4>
+                                                <?php if (!$reportesOrden): ?>
+                                                    <p class="form-note">Todavía no hay reportes técnicos asociados a esta orden.</p>
+                                                <?php else: ?>
+                                                    <div class="order-list">
+                                                        <?php foreach ($reportesOrden as $reporteOrden): ?>
+                                                            <article class="order-item">
+                                                                <div class="order-item-head">
+                                                                    <div>
+                                                                        <span class="eyebrow">Reporte #<?php echo (int)$reporteOrden['id']; ?> · <?php echo htmlspecialchars(date('d/m/Y H:i', strtotime($reporteOrden['created_at']))); ?></span>
+                                                                        <h4><?php echo htmlspecialchars($reporteOrden['tecnico']); ?> · <?php echo htmlspecialchars($reporteOrden['domicilio_calles']); ?></h4>
+                                                                    </div>
+                                                                    <span class="badge <?php echo badgeClass($reporteOrden['estado']); ?>"><?php echo htmlspecialchars($reporteOrden['estado']); ?></span>
+                                                                </div>
+                                                                <p class="order-description"><strong>Actividad realizada:</strong> <?php echo htmlspecialchars($reporteOrden['actividad_realizada'] ?: 'Sin detalle'); ?></p>
+                                                                <p class="order-description"><strong>Resultado:</strong> <?php echo htmlspecialchars($reporteOrden['resultado'] ?: 'Sin resultado'); ?></p>
+                                                                <p class="order-description"><strong>Descripción:</strong> <?php echo htmlspecialchars($reporteOrden['descripcion']); ?></p>
+                                                                <?php if (!empty($reporteOrden['materiales'])): ?>
+                                                                    <p class="order-description"><strong>Materiales:</strong> <?php echo htmlspecialchars($reporteOrden['materiales']); ?></p>
+                                                                <?php endif; ?>
+                                                            </article>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </section>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

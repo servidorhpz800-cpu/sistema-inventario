@@ -195,7 +195,25 @@ $equipos = getInventario($pdo);
 $equiposDisponibles = array_filter($equipos, fn($equipo) => $equipo['estado'] === 'disponible');
 $usuarios = getUsuarios($pdo);
 $reportes = getReportes($pdo);
-$ordenes = $pdo->query('SELECT o.*, u.nombre AS tecnico FROM ordenes o JOIN usuarios u ON u.id = o.tecnico_id ORDER BY o.created_at DESC')->fetchAll();
+$ordenes = $pdo->query('SELECT o.*, u.nombre AS tecnico, e.tipo AS equipo_tipo, e.marca AS equipo_marca, e.modelo AS equipo_modelo, e.serial AS equipo_serial
+    FROM ordenes o
+    JOIN usuarios u ON u.id = o.tecnico_id
+    LEFT JOIN equipos e ON e.id = o.equipo_id
+    ORDER BY o.created_at DESC')->fetchAll();
+$reportesPorOrden = [];
+if ($ordenes) {
+    $ordenIds = array_column($ordenes, 'id');
+    $marcadoresOrdenes = implode(', ', array_fill(0, count($ordenIds), '?'));
+    $reportesOrdenesStmt = $pdo->prepare("SELECT r.id, r.orden_id, r.created_at, r.domicilio_calles, r.actividad_realizada, r.materiales, r.resultado, r.descripcion, r.estado, u.nombre AS tecnico
+        FROM reportes r
+        JOIN usuarios u ON u.id = r.tecnico_id
+        WHERE r.orden_id IN ({$marcadoresOrdenes})
+        ORDER BY r.created_at DESC, r.id DESC");
+    $reportesOrdenesStmt->execute($ordenIds);
+    foreach ($reportesOrdenesStmt->fetchAll() as $reporteOrden) {
+        $reportesPorOrden[(int)$reporteOrden['orden_id']][] = $reporteOrden;
+    }
+}
 $clientes = $pdo->query("SELECT c.*, COUNT(o.id) AS total_ordenes, MAX(o.created_at) AS ultima_visita,
     (SELECT o_ip.ip_asignada FROM ordenes o_ip WHERE o_ip.cliente_id = c.id AND o_ip.ip_asignada IS NOT NULL AND o_ip.ip_asignada <> '' ORDER BY o_ip.created_at DESC, o_ip.id DESC LIMIT 1) AS ip_asignada,
     COALESCE(NULLIF(c.ubicacion_url, ''), (SELECT CONCAT('https://www.google.com/maps?q=', r.latitud, ',', r.longitud)
