@@ -6,6 +6,22 @@ const inventoryAdmin = window.inventoryAdminData;
         const barcodeResultAdmin = document.getElementById('barcodeResultAdmin')
             || document.querySelector('#adminEquipmentForm [data-modem-detection-result]');
         const serialButtonsAdmin = document.querySelectorAll('[data-scan-target]');
+        const buscarClienteAdmin = document.getElementById('buscarCliente');
+        const filasClientesAdmin = Array.from(document.querySelectorAll('#tablaClientes tr[data-client-search]'));
+        const sinClientesFiltradosAdmin = document.getElementById('sinClientesFiltrados');
+
+        buscarClienteAdmin?.addEventListener('input', () => {
+            const termino = buscarClienteAdmin.value.trim().toLocaleLowerCase();
+            let visibles = 0;
+            filasClientesAdmin.forEach((fila) => {
+                const coincide = fila.dataset.clientSearch.includes(termino);
+                fila.hidden = !coincide;
+                visibles += coincide ? 1 : 0;
+            });
+            if (sinClientesFiltradosAdmin) {
+                sinClientesFiltradosAdmin.hidden = visibles > 0 || filasClientesAdmin.length === 0;
+            }
+        });
 
         function escapeHtml(value) {
             return String(value ?? '')

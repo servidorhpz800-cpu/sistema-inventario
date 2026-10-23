@@ -438,7 +438,38 @@ $equiposDisponibles = array_filter($equipos, fn($equipo) => $equipo['estado'] ==
 $tecnicos = getUsuarios($pdo, 'tecnico');
 $archivadas = ($_GET['archivo'] ?? '') === '1';
 $ordenes = getOrdenes($pdo, null, $archivadas);
-$reportes = getReportes($pdo, null, $archivadas);
+$fechaDesdeReportes = $_GET['fecha_desde'] ?? '';
+$fechaHastaReportes = $_GET['fecha_hasta'] ?? '';
+$fechaDesdeReportes = is_string($fechaDesdeReportes) ? trim($fechaDesdeReportes) : '';
+$fechaHastaReportes = is_string($fechaHastaReportes) ? trim($fechaHastaReportes) : '';
+$errorFiltroFechasReportes = null;
+$fechaEsValida = static function (string $fecha): bool {
+    if ($fecha === '') {
+        return true;
+    }
+    $fechaParseada = DateTimeImmutable::createFromFormat('!Y-m-d', $fecha);
+    $erroresFecha = DateTimeImmutable::getLastErrors();
+    return $fechaParseada !== false
+        && $fechaParseada->format('Y-m-d') === $fecha
+        && ($erroresFecha === false || ($erroresFecha['warning_count'] === 0 && $erroresFecha['error_count'] === 0));
+};
+if ((!is_string($_GET['fecha_desde'] ?? '') && array_key_exists('fecha_desde', $_GET))
+    || (!is_string($_GET['fecha_hasta'] ?? '') && array_key_exists('fecha_hasta', $_GET))
+    || !$fechaEsValida($fechaDesdeReportes)
+    || !$fechaEsValida($fechaHastaReportes)) {
+    $errorFiltroFechasReportes = 'Las fechas seleccionadas no son válidas.';
+} elseif ($fechaDesdeReportes !== '' && $fechaHastaReportes !== '' && $fechaDesdeReportes > $fechaHastaReportes) {
+    $errorFiltroFechasReportes = 'La fecha inicial no puede ser posterior a la fecha final.';
+}
+$reportes = $errorFiltroFechasReportes !== null
+    ? getReportes($pdo, null, $archivadas)
+    : getReportes(
+        $pdo,
+        null,
+        $archivadas,
+        $fechaDesdeReportes !== '' ? $fechaDesdeReportes : null,
+        $fechaHastaReportes !== '' ? $fechaHastaReportes : null
+    );
 $tipoExportacion = $_GET['exportar'] ?? '';
 if (in_array($tipoExportacion, ['equipos', 'reportes', 'instalaciones', 'clientes', 'plantilla_modems'], true)) {
     $nombreArchivo = 'compuser-' . $tipoExportacion . '-' . date('Y-m-d') . '.csv';

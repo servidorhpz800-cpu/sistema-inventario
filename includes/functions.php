@@ -160,9 +160,16 @@ function getOrdenes(PDO $pdo, ?int $tecnicoId = null, bool $archivadas = false):
     return $stmt->fetchAll();
 }
 
-function getReportes(PDO $pdo, ?int $tecnicoId = null, bool $archivadas = false): array
+function getReportes(
+    PDO $pdo,
+    ?int $tecnicoId = null,
+    bool $archivadas = false,
+    ?string $fechaDesde = null,
+    ?string $fechaHasta = null
+): array
 {
-    $filtroArchivo = $tecnicoId !== null
+    $filtroPorFecha = $fechaDesde !== null || $fechaHasta !== null;
+    $filtroArchivo = $filtroPorFecha || $tecnicoId !== null
         ? '1 = 1'
         : ($archivadas
             ? "r.created_at < CURRENT_DATE AND (o.id IS NULL OR o.estado <> 'pendiente')"
@@ -173,12 +180,25 @@ function getReportes(PDO $pdo, ?int $tecnicoId = null, bool $archivadas = false)
         LEFT JOIN ordenes o ON o.id = r.orden_id
         LEFT JOIN equipos e ON e.id = COALESCE(r.equipo_id, o.equipo_id)
         WHERE {$filtroArchivo}";
+    $parametros = [];
+    if ($fechaDesde !== null) {
+        $sql .= ' AND r.created_at >= ?';
+        $parametros[] = $fechaDesde . ' 00:00:00';
+    }
+    if ($fechaHasta !== null) {
+        $sql .= ' AND r.created_at < DATE_ADD(?, INTERVAL 1 DAY)';
+        $parametros[] = $fechaHasta;
+    }
 
     if ($tecnicoId !== null) {
         $tecnicosEquipo = getTecnicosMismoVehiculo($pdo, $tecnicoId);
         $marcadoresTecnicos = implode(', ', array_fill(0, count($tecnicosEquipo), '?'));
         $stmt = $pdo->prepare($sql . " AND r.tecnico_id IN ({$marcadoresTecnicos}) ORDER BY r.created_at DESC");
-        $stmt->execute($tecnicosEquipo);
+        $stmt->execute(array_merge($parametros, $tecnicosEquipo));
+        $reportes = $stmt->fetchAll();
+    } elseif ($parametros) {
+        $stmt = $pdo->prepare($sql . ' ORDER BY r.created_at DESC');
+        $stmt->execute($parametros);
         $reportes = $stmt->fetchAll();
     } else {
         $stmt = $pdo->query($sql . ' ORDER BY r.created_at DESC');

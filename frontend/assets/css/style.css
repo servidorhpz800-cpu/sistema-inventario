@@ -279,6 +279,13 @@ button, input, select, textarea {
     margin-bottom: 8px;
 }
 
+.report-filter-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
 .report-summary {
     margin-top: 22px;
 }

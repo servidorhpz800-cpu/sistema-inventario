@@ -646,8 +646,20 @@ if (!isset(
                     </div>
                     <span class="badge info"><?php echo count($reportes); ?> reportes</span>
                 </div>
-                <p class="form-note">El resumen es histórico y muestra cuántos reportes tiene cada cliente y cuántos envió cada técnico. El detalle respeta la vista diaria o el archivo seleccionado.</p>
-                <div class="report-filter-bar">
+                <p class="form-note">Sin fechas, el detalle muestra los reportes de la vista diaria o del archivo. Selecciona una fecha o un rango para consultar reportes anteriores y ver cuántos se hicieron.</p>
+                <?php if ($errorFiltroFechasReportes !== null): ?>
+                    <p class="alert alert-danger" role="alert"><?php echo htmlspecialchars($errorFiltroFechasReportes); ?></p>
+                <?php endif; ?>
+                <form class="report-filter-bar" method="get">
+                    <?php if ($archivadas): ?><input type="hidden" name="archivo" value="1"><?php endif; ?>
+                    <label>
+                        <span>Desde</span>
+                        <input type="date" name="fecha_desde" value="<?php echo htmlspecialchars($fechaDesdeReportes, ENT_QUOTES); ?>">
+                    </label>
+                    <label>
+                        <span>Hasta</span>
+                        <input type="date" name="fecha_hasta" value="<?php echo htmlspecialchars($fechaHastaReportes, ENT_QUOTES); ?>">
+                    </label>
                     <label>
                         <span>Filtrar por cliente</span>
                         <select data-report-client-filter>
@@ -668,7 +680,11 @@ if (!isset(
                         </select>
                     </label>
                     <span class="badge info" data-report-visible-count aria-live="polite"><?php echo count($reportes); ?> reportes visibles</span>
-                </div>
+                    <div class="report-filter-actions">
+                        <button type="submit" class="btn btn-primary">Filtrar fechas</button>
+                        <a class="btn btn-secondary" href="tienda.php<?php echo $archivadas ? '?archivo=1' : ''; ?>">Limpiar fechas</a>
+                    </div>
+                </form>
                 <h3 class="report-detail-heading">Detalle de reportes</h3>
                 <div class="order-list">
                     <?php if (empty($reportes)): ?>

@@ -196,7 +196,18 @@ $equiposDisponibles = array_filter($equipos, fn($equipo) => $equipo['estado'] ==
 $usuarios = getUsuarios($pdo);
 $reportes = getReportes($pdo);
 $ordenes = $pdo->query('SELECT o.*, u.nombre AS tecnico FROM ordenes o JOIN usuarios u ON u.id = o.tecnico_id ORDER BY o.created_at DESC')->fetchAll();
-$clientes = $pdo->query('SELECT * FROM clientes ORDER BY nombre ASC')->fetchAll();
+$clientes = $pdo->query("SELECT c.*, COUNT(o.id) AS total_ordenes, MAX(o.created_at) AS ultima_visita,
+    (SELECT o_ip.ip_asignada FROM ordenes o_ip WHERE o_ip.cliente_id = c.id AND o_ip.ip_asignada IS NOT NULL AND o_ip.ip_asignada <> '' ORDER BY o_ip.created_at DESC, o_ip.id DESC LIMIT 1) AS ip_asignada,
+    COALESCE(NULLIF(c.ubicacion_url, ''), (SELECT CONCAT('https://www.google.com/maps?q=', r.latitud, ',', r.longitud)
+        FROM reportes r
+        LEFT JOIN ordenes orden_reporte ON orden_reporte.id = r.orden_id
+        WHERE r.latitud IS NOT NULL
+          AND r.longitud IS NOT NULL
+          AND (r.cliente_numero = c.numero OR orden_reporte.cliente_id = c.id)
+        ORDER BY r.created_at DESC, r.id DESC
+        LIMIT 1)) AS ubicacion_url_actual
+    FROM clientes c LEFT JOIN ordenes o ON o.cliente_id = c.id
+    GROUP BY c.id ORDER BY c.updated_at DESC, c.nombre ASC")->fetchAll();
 $movimientosTecnico = getMovimientosTecnico($pdo);
 $stats = [
     'total' => count($equipos),

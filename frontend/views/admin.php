@@ -497,29 +497,46 @@ if (!isset(
                 </div>
             </div>
             <?php elseif ($pestana === 'clientes'): ?>
-            <div class="card stacked-panel">
+            <div class="card customer-directory stacked-panel">
                 <div class="orders-toolbar">
                     <div>
-                        <span class="eyebrow">Administración de clientes</span>
+                        <span class="eyebrow">Directorio de clientes</span>
                         <h3>Clientes registrados</h3>
                     </div>
+                    <label class="orders-filter">
+                        <span>Buscar cliente</span>
+                        <input type="search" id="buscarCliente" placeholder="Nombre, teléfono o domicilio">
+                    </label>
                     <span class="badge info"><?php echo count($clientes); ?> clientes</span>
                 </div>
                 <div class="table-wrap">
                     <table class="table">
                         <thead>
-                            <tr><th>Cliente</th><th>Teléfono</th><th>Dirección</th><th>Ciudad</th><th>Acciones</th></tr>
+                            <tr><th>Cliente</th><th>Teléfono</th><th>Domicilio</th><th>Pueblo o ciudad</th><th>IP más reciente</th><th>Referencias</th><th>Órdenes</th><th>Última visita</th><th>Acciones</th></tr>
                         </thead>
-                        <tbody>
+                        <tbody id="tablaClientes">
                             <?php if (empty($clientes)): ?>
-                                <tr><td colspan="5">No hay clientes registrados.</td></tr>
+                                <tr><td colspan="9">Los clientes se guardarán aquí al crear su primera orden.</td></tr>
                             <?php else: ?>
                                 <?php foreach ($clientes as $cliente): ?>
-                                    <tr>
+                                    <?php
+                                    $direccionCliente = implode(', ', array_filter([
+                                        trim($cliente['calle'] . ' ' . ($cliente['numero_exterior'] ?: '')),
+                                        $cliente['colonia'] ?: '',
+                                        $cliente['ciudad'] ?: '',
+                                    ]));
+                                    $urlMapaCliente = $cliente['ubicacion_url_actual'] ?: 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($direccionCliente);
+                                    $busquedaCliente = strtolower(trim($cliente['nombre'] . ' ' . $cliente['numero'] . ' ' . $cliente['calle'] . ' ' . ($cliente['numero_exterior'] ?? '') . ' ' . ($cliente['colonia'] ?? '') . ' ' . ($cliente['ciudad'] ?? '')));
+                                    ?>
+                                    <tr data-client-search="<?php echo htmlspecialchars($busquedaCliente, ENT_QUOTES); ?>">
                                         <td><?php echo htmlspecialchars($cliente['nombre']); ?></td>
-                                        <td><?php echo htmlspecialchars($cliente['numero']); ?></td>
-                                        <td><?php echo htmlspecialchars(trim(($cliente['calle'] ?? '') . ' ' . ($cliente['numero_exterior'] ?? '') . ', ' . ($cliente['colonia'] ?? ''))); ?></td>
-                                        <td><?php echo htmlspecialchars($cliente['ciudad'] ?: 'Sin ciudad'); ?></td>
+                                        <td><a href="tel:<?php echo htmlspecialchars($cliente['numero']); ?>"><?php echo htmlspecialchars($cliente['numero']); ?></a></td>
+                                        <td><?php echo htmlspecialchars(trim($cliente['calle'] . ' ' . ($cliente['numero_exterior'] ?: '') . ', ' . ($cliente['colonia'] ?: ''))); ?><br><?php if ($cliente['ubicacion_url_actual'] || $direccionCliente !== ''): ?><a href="<?php echo htmlspecialchars($urlMapaCliente, ENT_QUOTES); ?>" target="_blank" rel="noopener">Ver ubicación en mapa</a><?php else: ?>Ubicación no registrada<?php endif; ?></td>
+                                        <td><?php echo htmlspecialchars($cliente['ciudad'] ?: 'Sin ciudad registrada'); ?></td>
+                                        <td><?php echo htmlspecialchars($cliente['ip_asignada'] ?: 'Sin IP registrada'); ?></td>
+                                        <td><?php echo htmlspecialchars($cliente['referencias'] ?: '-'); ?></td>
+                                        <td><?php echo (int)$cliente['total_ordenes']; ?></td>
+                                        <td><?php echo $cliente['ultima_visita'] ? htmlspecialchars(date('d/m/Y', strtotime($cliente['ultima_visita']))) : '-'; ?></td>
                                         <td>
                                             <form method="POST" onsubmit="return confirm('¿Eliminar definitivamente este cliente? Las órdenes conservarán los datos del cliente, pero perderán el vínculo con su ficha.');">
                                                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($adminCsrfToken, ENT_QUOTES, 'UTF-8'); ?>">
@@ -533,6 +550,7 @@ if (!isset(
                             <?php endif; ?>
                         </tbody>
                     </table>
+                    <p id="sinClientesFiltrados" class="form-note" hidden>No hay clientes que coincidan con la búsqueda.</p>
                 </div>
             </div>
             <?php else: ?>
