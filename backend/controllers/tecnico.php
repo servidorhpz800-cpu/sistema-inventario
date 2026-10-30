@@ -473,6 +473,7 @@ $movimientosTecnicoParaReporte = array_values(array_filter(
     $movimientosTecnico,
     static fn(array $movimiento): bool => in_array($movimiento['estado'], ['portado', 'falla'], true)
 ));
+$clientesParaUso = $pdo->query('SELECT id, nombre, numero, calle, numero_exterior, colonia, ciudad FROM clientes ORDER BY nombre ASC, numero ASC')->fetchAll();
 $tecnico = $pdo->prepare('SELECT * FROM usuarios WHERE id = :id LIMIT 1');
 $tecnico->execute(['id' => (int)$_SESSION['usuario_id']]);
 $tecnico = $tecnico->fetch();

@@ -97,6 +97,10 @@ CREATE TABLE IF NOT EXISTS equipos_tecnico (
     CONSTRAINT fk_equipos_tecnico_orden FOREIGN KEY (orden_id) REFERENCES ordenes(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+ALTER TABLE equipos_tecnico
+    ADD COLUMN IF NOT EXISTS ciudad VARCHAR(120) DEFAULT NULL AFTER cliente_numero,
+    ADD COLUMN IF NOT EXISTS domicilio_calles VARCHAR(180) DEFAULT NULL AFTER ciudad;
+
 CREATE TABLE IF NOT EXISTS reportes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     tecnico_id INT NOT NULL,
@@ -130,6 +134,12 @@ CREATE TABLE IF NOT EXISTS reportes (
     CONSTRAINT fk_reportes_equipo FOREIGN KEY (equipo_id) REFERENCES equipos(id) ON DELETE SET NULL,
     CONSTRAINT fk_reportes_movimiento FOREIGN KEY (movimiento_id) REFERENCES equipos_tecnico(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+UPDATE equipos_tecnico et
+JOIN reportes r ON r.movimiento_id = et.id
+SET et.ciudad = COALESCE(NULLIF(et.ciudad, ''), r.ciudad),
+    et.domicilio_calles = COALESCE(NULLIF(et.domicilio_calles, ''), r.domicilio_calles)
+WHERE et.ciudad IS NULL OR et.domicilio_calles IS NULL;
 
 CREATE TABLE IF NOT EXISTS reporte_evidencias (
     id INT AUTO_INCREMENT PRIMARY KEY,

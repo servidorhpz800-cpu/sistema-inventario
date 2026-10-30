@@ -187,6 +187,36 @@ const filtroOrdenes = document.getElementById('filtroOrdenes');
 
         document.querySelectorAll('#reporteTecnicoForm [data-report-photo-input]').forEach(prepararSelectorFoto);
 
+        const clienteUsoSelect = document.querySelector('[data-uso-cliente]');
+        if (clienteUsoSelect) {
+            const clienteUsoNombre = document.querySelector('input[name="uso_cliente_nombre"]');
+            const clienteUsoNumero = document.querySelector('input[name="uso_cliente_numero"]');
+            const clienteUsoCiudad = document.querySelector('input[name="uso_ciudad"]');
+            const clienteUsoDomicilio = document.querySelector('input[name="uso_domicilio"]');
+
+            clienteUsoSelect.addEventListener('change', () => {
+                const opcion = clienteUsoSelect.selectedOptions[0];
+                if (!opcion) {
+                    return;
+                }
+                if (opcion.value === '0') {
+                    clienteUsoNombre.value = '';
+                    clienteUsoNumero.value = '';
+                    clienteUsoCiudad.value = '';
+                    clienteUsoDomicilio.value = '';
+                    return;
+                }
+
+                clienteUsoNombre.value = opcion.dataset.nombre || '';
+                clienteUsoNumero.value = opcion.dataset.numero || '';
+                clienteUsoCiudad.value = opcion.dataset.ciudad || '';
+                clienteUsoDomicilio.value = [
+                    [opcion.dataset.calle, opcion.dataset.numeroExterior].filter(Boolean).join(' '),
+                    opcion.dataset.colonia,
+                ].filter(Boolean).join(', ');
+            });
+        }
+
         const completarClienteReporte = (select) => {
             const opcion = select?.selectedOptions[0];
             if (opcion && opcion.value !== '0') {

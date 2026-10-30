@@ -22,6 +22,7 @@
             /** @var array $movimientosTecnicoParaUso */
             /** @var array $movimientosTecnicoParaReporte */
             /** @var array $movimientosTecnicoActivos */
+            /** @var array $clientesParaUso */
             /** @var array $reportes */
             /** @var ?string $mensaje */
             /** @var string $tipoMensaje */
@@ -32,6 +33,7 @@
                 $movimientosTecnicoParaUso,
                 $movimientosTecnicoParaReporte,
                 $movimientosTecnicoActivos,
+                $clientesParaUso,
                 $reportes,
                 $tipoMensaje
             )) {
@@ -250,6 +252,24 @@
                                 <?php endforeach; ?>
                             </select>
                         </label>
+                        <label>
+                            <span>Seleccionar cliente registrado (opcional)</span>
+                            <select name="uso_cliente_id" data-uso-cliente>
+                                <option value="0">Escribir los datos del cliente manualmente</option>
+                                <?php foreach ($clientesParaUso as $cliente): ?>
+                                    <option
+                                        value="<?php echo (int)$cliente['id']; ?>"
+                                        data-nombre="<?php echo htmlspecialchars($cliente['nombre'], ENT_QUOTES, 'UTF-8'); ?>"
+                                        data-numero="<?php echo htmlspecialchars($cliente['numero'], ENT_QUOTES, 'UTF-8'); ?>"
+                                        data-calle="<?php echo htmlspecialchars($cliente['calle'], ENT_QUOTES, 'UTF-8'); ?>"
+                                        data-numero-exterior="<?php echo htmlspecialchars((string)($cliente['numero_exterior'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
+                                        data-colonia="<?php echo htmlspecialchars((string)($cliente['colonia'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
+                                        data-ciudad="<?php echo htmlspecialchars((string)($cliente['ciudad'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
+                                    ><?php echo htmlspecialchars($cliente['nombre'] . ' · ' . $cliente['numero'], ENT_QUOTES, 'UTF-8'); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <small class="form-note">Al elegir un cliente se completan sus datos; puedes corregirlos antes de guardar. Si no está registrado, déjalo en manual y escribe los datos.</small>
+                        </label>
                         <div class="form-grid">
                             <label>
                                 <span>Nombre del cliente</span>
@@ -266,7 +286,7 @@
                         </div>
                         <label>
                             <span>Domicilio o calles</span>
-                            <input type="text" name="uso_domicilio" maxlength="180" placeholder="Calle, número y referencias" required>
+                            <input type="text" name="uso_domicilio" maxlength="180" placeholder="Calle, número, colonia y referencias" required>
                         </label>
                         <label>
                             <span>Observaciones (opcional)</span>
