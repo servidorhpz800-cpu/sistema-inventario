@@ -249,7 +249,7 @@ function getReportEvidenceFromR2(string $filename): ?array
 
 function deleteReportEvidenceFile(string $filename): void
 {
-    if (isReportStorageR2Enabled()) {
+    if (isReportStorageR2Enabled()) { 
         getReportesR2Client()->deleteObject([
             'Bucket' => trim((string)getenv('COMPUSER_R2_BUCKET')),
             'Key' => getReportEvidenceKey($filename),
@@ -456,10 +456,11 @@ function getTecnicosMismoVehiculo(PDO $pdo, int $tecnicoId): array
 
 function getMovimientosTecnico(PDO $pdo, ?int $tecnicoId = null): array
 {
-    $sql = "SELECT et.*, e.tipo, e.marca, e.modelo, e.serial, o.tipo_orden,
+    $sql = "SELECT et.*, e.tipo, e.marca, e.modelo, e.serial, e.estado AS estado_inventario, o.tipo_orden,
             COALESCE(NULLIF(TRIM(et.cliente_nombre), ''), o.cliente_nombre) AS cliente_nombre_actual,
             COALESCE(NULLIF(TRIM(et.cliente_numero), ''), o.cliente_numero) AS cliente_numero_actual,
-            COALESCE(NULLIF(TRIM(o.ciudad), ''), (SELECT r.ciudad FROM reportes r WHERE r.movimiento_id = et.id AND r.ciudad IS NOT NULL AND r.ciudad <> '' ORDER BY r.created_at DESC, r.id DESC LIMIT 1)) AS ciudad,
+            COALESCE(NULLIF(TRIM(et.ciudad), ''), NULLIF(TRIM(o.ciudad), ''), (SELECT r.ciudad FROM reportes r WHERE r.movimiento_id = et.id AND r.ciudad IS NOT NULL AND r.ciudad <> '' ORDER BY r.created_at DESC, r.id DESC LIMIT 1)) AS ciudad_actual,
+            COALESCE(NULLIF(TRIM(et.domicilio_calles), ''), NULLIF(TRIM(CONCAT_WS(' ', NULLIF(TRIM(o.calle), ''), NULLIF(TRIM(o.numero_exterior), ''), NULLIF(TRIM(o.colonia), ''))), ''), (SELECT r.domicilio_calles FROM reportes r WHERE r.movimiento_id = et.id AND r.domicilio_calles IS NOT NULL AND r.domicilio_calles <> '' ORDER BY r.created_at DESC, r.id DESC LIMIT 1)) AS domicilio_actual,
             o.calle, o.numero_exterior, o.colonia, o.id AS orden_numero, u.nombre AS tecnico
         FROM equipos_tecnico et
         JOIN equipos e ON e.id = et.equipo_id
@@ -480,7 +481,9 @@ function getMovimientosTecnico(PDO $pdo, ?int $tecnicoId = null): array
     foreach ($movimientos as &$movimiento) {
         $movimiento['cliente_nombre'] = $movimiento['cliente_nombre_actual'];
         $movimiento['cliente_numero'] = $movimiento['cliente_numero_actual'];
-        unset($movimiento['cliente_nombre_actual'], $movimiento['cliente_numero_actual']);
+        $movimiento['ciudad'] = $movimiento['ciudad_actual'];
+        $movimiento['domicilio_calles'] = $movimiento['domicilio_actual'];
+        unset($movimiento['cliente_nombre_actual'], $movimiento['cliente_numero_actual'], $movimiento['ciudad_actual'], $movimiento['domicilio_actual']);
     }
     unset($movimiento);
     return $movimientos;

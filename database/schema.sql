@@ -119,6 +119,8 @@ CREATE TABLE IF NOT EXISTS equipos_tecnico (
     orden_id INT DEFAULT NULL,
     cliente_nombre VARCHAR(150) DEFAULT NULL,
     cliente_numero VARCHAR(40) DEFAULT NULL,
+    ciudad VARCHAR(120) DEFAULT NULL,
+    domicilio_calles VARCHAR(180) DEFAULT NULL,
     estado ENUM('portado', 'utilizado', 'no_utilizado', 'falla', 'devuelto') NOT NULL DEFAULT 'portado',
     observaciones TEXT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

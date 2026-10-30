@@ -72,6 +72,78 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['actualiz
     }
 }
 
+if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_uso_modem'])) {
+    $movimientoId = (int)($_POST['uso_movimiento_id'] ?? 0);
+    $clienteNombre = trim((string)($_POST['uso_cliente_nombre'] ?? ''));
+    $clienteNumero = trim((string)($_POST['uso_cliente_numero'] ?? ''));
+    $ciudad = trim((string)($_POST['uso_ciudad'] ?? ''));
+    $domicilio = trim((string)($_POST['uso_domicilio'] ?? ''));
+    $observaciones = trim((string)($_POST['uso_observaciones'] ?? ''));
+    $excedeLimite = static function (string $valor, int $limite): bool {
+        $coincidencias = [];
+        $cantidadCaracteres = preg_match_all('/./us', $valor, $coincidencias);
+        return $cantidadCaracteres === false || $cantidadCaracteres > $limite;
+    };
+
+    if (
+        $movimientoId <= 0
+        || $clienteNombre === ''
+        || $excedeLimite($clienteNombre, 150)
+        || $clienteNumero === ''
+        || $excedeLimite($clienteNumero, 40)
+        || $ciudad === ''
+        || $excedeLimite($ciudad, 120)
+        || $domicilio === ''
+        || $excedeLimite($domicilio, 180)
+    ) {
+        $mensaje = 'Completa el módem, nombre y número del cliente, ciudad y domicilio. Verifica también el largo de los datos.';
+        $tipoMensaje = 'danger';
+    } else {
+        $tecnicosEquipo = getTecnicosMismoVehiculo($pdo, $tecnicoIdSesion);
+        $marcadoresTecnicos = implode(', ', array_fill(0, count($tecnicosEquipo), '?'));
+        try {
+            $pdo->beginTransaction();
+            $movimientoStmt = $pdo->prepare("SELECT id FROM equipos_tecnico WHERE id = ? AND estado = 'portado' AND tecnico_id IN ({$marcadoresTecnicos}) LIMIT 1 FOR UPDATE");
+            $movimientoStmt->execute(array_merge([$movimientoId], $tecnicosEquipo));
+
+            if (!$movimientoStmt->fetchColumn()) {
+                throw new DomainException('El módem ya fue utilizado o ya no pertenece a tu despacho.');
+            }
+
+            $actualizarMovimiento = $pdo->prepare("UPDATE equipos_tecnico
+                SET estado = 'utilizado', cliente_nombre = ?, cliente_numero = ?, ciudad = ?, domicilio_calles = ?, observaciones = ?
+                WHERE id = ? AND estado = 'portado' AND tecnico_id IN ({$marcadoresTecnicos})");
+            $actualizarMovimiento->execute(array_merge([
+                $clienteNombre,
+                $clienteNumero,
+                $ciudad,
+                $domicilio,
+                $observaciones,
+                $movimientoId,
+            ], $tecnicosEquipo));
+
+            if ($actualizarMovimiento->rowCount() !== 1) {
+                throw new DomainException('El módem ya fue actualizado por otro usuario. Recarga la página.');
+            }
+
+            registrarActividad($pdo, 'Técnico', 'Registrar uso de módem', 'movimiento_equipo', $movimientoId, "Módem utilizado con {$clienteNombre} ({$clienteNumero}) en {$domicilio}, {$ciudad}. El inventario queda pendiente de revisión por Tienda.");
+            $pdo->commit();
+            $mensaje = 'Uso registrado. El módem ya no aparece entre tus equipos pendientes; Tienda puede revisar el cliente y decidir sobre el inventario.';
+        } catch (Throwable $error) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            if (!$error instanceof DomainException) {
+                error_log('No se pudo registrar el uso del módem: ' . $error->getMessage());
+            }
+            $mensaje = $error instanceof DomainException
+                ? $error->getMessage()
+                : 'No se pudo registrar el uso del módem. No se guardaron cambios; inténtalo de nuevo.';
+            $tipoMensaje = 'danger';
+        }
+    }
+}
+
 if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_reporte'])) {
     $ordenId = (int)($_POST['orden_id'] ?? 0);
     $ordenId = $ordenId > 0 ? $ordenId : null;
@@ -180,11 +252,11 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
     $tecnicosEquipoReporte = getTecnicosMismoVehiculo($pdo, $tecnicoIdSesion);
     $marcadoresTecnicosReporte = implode(', ', array_fill(0, count($tecnicosEquipoReporte), '?'));
     if ($movimientoId > 0) {
-        $movimientoStmt = $pdo->prepare("SELECT id, equipo_id, orden_id, cliente_nombre, cliente_numero FROM equipos_tecnico WHERE id = ? AND tecnico_id IN ({$marcadoresTecnicosReporte}) LIMIT 1");
+        $movimientoStmt = $pdo->prepare("SELECT id, equipo_id, orden_id, cliente_nombre, cliente_numero FROM equipos_tecnico WHERE id = ? AND estado IN ('portado', 'falla') AND tecnico_id IN ({$marcadoresTecnicosReporte}) LIMIT 1");
         $movimientoStmt->execute(array_merge([$movimientoId], $tecnicosEquipoReporte));
         $movimientoReporte = $movimientoStmt->fetch();
         if (!$movimientoReporte) {
-            $mensaje = 'El módem seleccionado no pertenece a tu despacho.';
+            $mensaje = 'El módem seleccionado ya fue utilizado o no pertenece a tu despacho.';
             $tipoMensaje = 'danger';
         } elseif ($ordenId === null && !empty($movimientoReporte['orden_id'])) {
             $ordenId = (int)$movimientoReporte['orden_id'];
@@ -299,30 +371,25 @@ if (!$esAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_
                 }
             }
 
-            $equipoIdActualizado = $equipoIdReporte ?? 0;
-
             if ($movimientoReporte) {
                 $estadoMovimiento = $estadoEquipo === 'normal' ? 'utilizado' : 'falla';
-                $movimientoUpdate = $pdo->prepare("UPDATE equipos_tecnico SET estado = ?, observaciones = ? WHERE id = ? AND tecnico_id IN ({$marcadoresTecnicosReporte})");
-                $movimientoUpdate->execute(array_merge([$estadoMovimiento, $descripcion, $movimientoId], $tecnicosEquipoReporte));
-            }
-
-            if ($equipoIdActualizado > 0) {
-                if ($estadoEquipo === 'normal') {
-                    $equipoUpdate = $pdo->prepare("UPDATE equipos SET condicion = 'medio_uso', estado = 'retirado', ubicacion = 'Cliente' WHERE id = :id");
-                    $equipoUpdate->execute(['id' => $equipoIdActualizado]);
-                } elseif ($estadoEquipo === 'no_serve') {
-                    $equipoUpdate = $pdo->prepare("UPDATE equipos SET condicion = 'no_serve', estado = 'dado_baja', ubicacion = 'Baja técnica' WHERE id = :id");
-                    $equipoUpdate->execute(['id' => $equipoIdActualizado]);
-                } else {
-                    $equipoUpdate = $pdo->prepare("UPDATE equipos SET condicion = 'danado', estado = 'en_reparacion', ubicacion = 'Revisión técnica' WHERE id = :id");
-                    $equipoUpdate->execute(['id' => $equipoIdActualizado]);
-                }
+                $movimientoUpdate = $pdo->prepare("UPDATE equipos_tecnico
+                    SET estado = ?, cliente_nombre = ?, cliente_numero = ?, ciudad = ?, domicilio_calles = ?, observaciones = ?
+                    WHERE id = ? AND tecnico_id IN ({$marcadoresTecnicosReporte})");
+                $movimientoUpdate->execute(array_merge([
+                    $estadoMovimiento,
+                    $clienteNombreReporte,
+                    $clienteNumeroReporte,
+                    $ciudadReporte,
+                    $domicilioCalles,
+                    $descripcion,
+                    $movimientoId,
+                ], $tecnicosEquipoReporte));
             }
 
             registrarActividad($pdo, 'Técnico', 'Enviar reporte', 'reporte', $reporteId, "Reporte de domicilio '{$domicilioCalles}' enviado con estado {$estadoEquipo}.");
             $pdo->commit();
-            $mensaje = 'Reporte enviado; el movimiento y el inventario se actualizaron con el resultado.';
+            $mensaje = 'Reporte enviado. El seguimiento del módem se actualizó y Tienda puede revisar el inventario.';
         } catch (Throwable $error) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
@@ -398,9 +465,13 @@ $movimientosTecnicoActivos = array_values(array_filter(
     $movimientosTecnico,
     static fn(array $movimiento): bool => in_array($movimiento['estado'], ['portado', 'falla'], true)
 ));
+$movimientosTecnicoParaUso = array_values(array_filter(
+    $movimientosTecnico,
+    static fn(array $movimiento): bool => $movimiento['estado'] === 'portado'
+));
 $movimientosTecnicoParaReporte = array_values(array_filter(
     $movimientosTecnico,
-    static fn(array $movimiento): bool => !in_array($movimiento['estado'], ['no_utilizado', 'devuelto'], true)
+    static fn(array $movimiento): bool => in_array($movimiento['estado'], ['portado', 'falla'], true)
 ));
 $tecnico = $pdo->prepare('SELECT * FROM usuarios WHERE id = :id LIMIT 1');
 $tecnico->execute(['id' => (int)$_SESSION['usuario_id']]);

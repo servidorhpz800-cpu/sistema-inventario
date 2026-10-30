@@ -19,6 +19,7 @@
             </nav>
             <div class="user-chip"><?php echo htmlspecialchars($_SESSION['nombre']);             /** @var bool $esAdmin */
             /** @var array $ordenes */
+            /** @var array $movimientosTecnicoParaUso */
             /** @var array $movimientosTecnicoParaReporte */
             /** @var array $movimientosTecnicoActivos */
             /** @var array $reportes */
@@ -28,6 +29,7 @@
             if (!isset(
                 $esAdmin,
                 $ordenes,
+                $movimientosTecnicoParaUso,
                 $movimientosTecnicoParaReporte,
                 $movimientosTecnicoActivos,
                 $reportes,
@@ -235,25 +237,42 @@
                         </div>
                         <span class="step-number">02</span>
                     </div>
-                    <p class="form-note">Desde aquí solo puedes guardar observaciones. Para registrar el uso, una falla o dar de baja un módem, envía un reporte con los datos del cliente. La devolución física se registra en Tienda.</p>
+                    <p class="form-note">Registra aquí el módem utilizado y los datos del cliente y domicilio. Al guardar, dejará de aparecer entre tus equipos disponibles. Esto no da de baja el equipo: Tienda revisará el registro y decidirá qué hacer con el inventario.</p>
                     <form method="POST">
                         <label>
-                            <span>Equipo registrado</span>
-                            <select name="movimiento_id" required>
-                                <option value="">Seleccione</option>
-                                <?php foreach ($movimientosTecnicoActivos as $movimiento): ?>
+                            <span>Módem utilizado</span>
+                            <select name="uso_movimiento_id" required>
+                                <option value="">Seleccione un módem portado</option>
+                                <?php foreach ($movimientosTecnicoParaUso as $movimiento): ?>
                                     <option value="<?php echo (int)$movimiento['id']; ?>">
-                                        <?php echo htmlspecialchars($movimiento['tipo']); ?> · <?php echo htmlspecialchars($movimiento['marca'] ?: 'Sin marca'); ?> · Serie: <?php echo htmlspecialchars($movimiento['serial'] ?: 'Sin serie'); ?> · Asignado a: <?php echo htmlspecialchars($movimiento['tecnico']); ?> · Orden #<?php echo (int)$movimiento['orden_id']; ?> · <?php echo htmlspecialchars($movimiento['estado']); ?>
+                                        <?php echo htmlspecialchars($movimiento['tipo']); ?> · <?php echo htmlspecialchars($movimiento['marca'] ?: 'Sin marca'); ?> · Serie: <?php echo htmlspecialchars($movimiento['serial'] ?: 'Sin serie'); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
                         </label>
-                        <input type="hidden" name="estado_equipo_tecnico" value="portado">
+                        <div class="form-grid">
+                            <label>
+                                <span>Nombre del cliente</span>
+                                <input type="text" name="uso_cliente_nombre" maxlength="150" required>
+                            </label>
+                            <label>
+                                <span>Número del cliente</span>
+                                <input type="tel" name="uso_cliente_numero" maxlength="40" required>
+                            </label>
+                            <label>
+                                <span>Pueblo o ciudad</span>
+                                <input type="text" name="uso_ciudad" maxlength="120" required>
+                            </label>
+                        </div>
                         <label>
-                            <span>Detalle de la situación</span>
-                            <textarea name="equipo_observaciones_actualizacion" placeholder="Agrega notas sobre el módem asignado."></textarea>
+                            <span>Domicilio o calles</span>
+                            <input type="text" name="uso_domicilio" maxlength="180" placeholder="Calle, número y referencias" required>
                         </label>
-                        <button type="submit" name="actualizar_equipo_tecnico" class="btn btn-success">Guardar observaciones</button>
+                        <label>
+                            <span>Observaciones (opcional)</span>
+                            <textarea name="uso_observaciones" placeholder="Detalles adicionales del uso del módem."></textarea>
+                        </label>
+                        <button type="submit" name="registrar_uso_modem" class="btn btn-success">Registrar uso del módem</button>
                     </form>
             </div>
             <?php endif; ?>

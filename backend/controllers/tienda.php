@@ -194,6 +194,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['agregar_equipo'])) {
     }
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dar_baja_modem_utilizado'])) {
+    $movimientoId = (int)($_POST['movimiento_baja_id'] ?? 0);
+
+    if ($movimientoId <= 0) {
+        $mensaje = 'Selecciona un módem utilizado válido.';
+        $tipoMensaje = 'danger';
+    } else {
+        try {
+            $pdo->beginTransaction();
+            $movimientoStmt = $pdo->prepare("SELECT et.equipo_id, e.estado AS estado_inventario
+                FROM equipos_tecnico et
+                JOIN equipos e ON e.id = et.equipo_id
+                WHERE et.id = :id AND et.estado = 'utilizado'
+                FOR UPDATE");
+            $movimientoStmt->execute(['id' => $movimientoId]);
+            $movimiento = $movimientoStmt->fetch();
+
+            if (!$movimiento) {
+                throw new DomainException('El movimiento no existe o el módem no está registrado como utilizado.');
+            }
+            if ($movimiento['estado_inventario'] === 'dado_baja') {
+                throw new DomainException('Este módem ya está dado de baja.');
+            }
+
+            $equipoUpdate = $pdo->prepare("UPDATE equipos SET estado = 'dado_baja', ubicacion = 'Baja técnica' WHERE id = :id AND estado <> 'dado_baja'");
+            $equipoUpdate->execute(['id' => (int)$movimiento['equipo_id']]);
+            if ($equipoUpdate->rowCount() !== 1) {
+                throw new DomainException('El estado del módem cambió. Actualiza la página y vuelve a intentarlo.');
+            }
+
+            registrarActividad($pdo, 'Tienda', 'Dar de baja módem utilizado', 'movimiento_equipo', $movimientoId, 'Tienda dio de baja el módem utilizado; el historial del cliente y del técnico se conservó.');
+            $pdo->commit();
+            $mensaje = 'Módem dado de baja. El registro de uso y sus datos de cliente se conservaron en el historial.';
+        } catch (Throwable $error) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            if (!$error instanceof DomainException) {
+                error_log('No se pudo dar de baja el módem utilizado: ' . $error->getMessage());
+            }
+            $mensaje = $error instanceof DomainException
+                ? $error->getMessage()
+                : 'No se pudo dar de baja el módem. No se guardaron cambios; inténtalo de nuevo.';
+            $tipoMensaje = 'danger';
+        }
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['recibir_equipo_tecnico'])) {
     $movimientoId = (int)($_POST['movimiento_recepcion_id'] ?? 0);
     $estadoRecepcion = (string)($_POST['estado_recepcion'] ?? '');
@@ -547,11 +595,13 @@ $clientesSql = "SELECT c.*, COUNT(o.id) AS total_ordenes, MAX(o.created_at) AS u
     FROM clientes c LEFT JOIN ordenes o ON o.cliente_id = c.id
     GROUP BY c.id ORDER BY c.updated_at DESC, c.nombre ASC";
 $clientes = $pdo->query($clientesSql)->fetchAll();
-$equiposEnCampo = $pdo->query("SELECT et.*, e.tipo, e.marca, e.modelo, e.serial, e.estado AS estado_inventario, u.nombre AS tecnico, o.id AS orden_numero, o.tipo_orden, COALESCE(et.cliente_nombre, o.cliente_nombre) AS cliente_nombre_actual, COALESCE(et.cliente_numero, o.cliente_numero) AS cliente_numero_actual, COALESCE(NULLIF(TRIM(o.ciudad), ''), (SELECT r.ciudad FROM reportes r WHERE r.movimiento_id = et.id AND r.ciudad IS NOT NULL AND r.ciudad <> '' ORDER BY r.created_at DESC, r.id DESC LIMIT 1)) AS ciudad, o.calle, o.numero_exterior, o.colonia, o.ubicacion_url FROM equipos_tecnico et JOIN equipos e ON e.id = et.equipo_id JOIN usuarios u ON u.id = et.tecnico_id LEFT JOIN ordenes o ON o.id = et.orden_id ORDER BY et.updated_at DESC")->fetchAll();
+$equiposEnCampo = $pdo->query("SELECT et.*, e.tipo, e.marca, e.modelo, e.serial, e.estado AS estado_inventario, u.nombre AS tecnico, o.id AS orden_numero, o.tipo_orden, COALESCE(NULLIF(TRIM(et.cliente_nombre), ''), o.cliente_nombre) AS cliente_nombre_actual, COALESCE(NULLIF(TRIM(et.cliente_numero), ''), o.cliente_numero) AS cliente_numero_actual, COALESCE(NULLIF(TRIM(et.ciudad), ''), NULLIF(TRIM(o.ciudad), ''), (SELECT r.ciudad FROM reportes r WHERE r.movimiento_id = et.id AND r.ciudad IS NOT NULL AND r.ciudad <> '' ORDER BY r.created_at DESC, r.id DESC LIMIT 1)) AS ciudad_actual, COALESCE(NULLIF(TRIM(et.domicilio_calles), ''), NULLIF(TRIM(CONCAT_WS(' ', NULLIF(TRIM(o.calle), ''), NULLIF(TRIM(o.numero_exterior), ''), NULLIF(TRIM(o.colonia), ''))), ''), (SELECT r.domicilio_calles FROM reportes r WHERE r.movimiento_id = et.id AND r.domicilio_calles IS NOT NULL AND r.domicilio_calles <> '' ORDER BY r.created_at DESC, r.id DESC LIMIT 1)) AS domicilio_actual, o.calle, o.numero_exterior, o.colonia, o.ubicacion_url FROM equipos_tecnico et JOIN equipos e ON e.id = et.equipo_id JOIN usuarios u ON u.id = et.tecnico_id LEFT JOIN ordenes o ON o.id = et.orden_id ORDER BY et.updated_at DESC")->fetchAll();
 foreach ($equiposEnCampo as &$movimientoCampo) {
     $movimientoCampo['cliente_nombre'] = $movimientoCampo['cliente_nombre_actual'];
     $movimientoCampo['cliente_numero'] = $movimientoCampo['cliente_numero_actual'];
-    unset($movimientoCampo['cliente_nombre_actual'], $movimientoCampo['cliente_numero_actual']);
+    $movimientoCampo['ciudad'] = $movimientoCampo['ciudad_actual'];
+    $movimientoCampo['domicilio_calles'] = $movimientoCampo['domicilio_actual'];
+    unset($movimientoCampo['cliente_nombre_actual'], $movimientoCampo['cliente_numero_actual'], $movimientoCampo['ciudad_actual'], $movimientoCampo['domicilio_actual']);
 }
 unset($movimientoCampo);
 $equiposPendientesRecepcion = array_values(array_filter(

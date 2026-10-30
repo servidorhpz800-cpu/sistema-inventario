@@ -110,12 +110,21 @@ if (!isset(
                                     <div><span>Orden</span><?php echo $movimiento['orden_numero'] ? '#' . (int)$movimiento['orden_numero'] : 'Sin orden específica'; ?></div>
                                     <div><span>Cliente</span><?php echo htmlspecialchars($movimiento['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($movimiento['cliente_numero'] ?: 'Sin número'); ?></div>
                                     <div><span>Pueblo o ciudad</span><?php echo htmlspecialchars($movimiento['ciudad'] ?: 'Ciudad no registrada'); ?></div>
-                                    <div><span>Ubicación</span><?php echo htmlspecialchars($direccionMovimiento ?: 'Domicilio no registrado'); ?></div>
+                                    <div><span>Ubicación</span><?php echo htmlspecialchars($movimiento['domicilio_calles'] ?: $direccionMovimiento ?: 'Domicilio no registrado'); ?></div>
+                                    <div><span>Estado del inventario</span><?php echo htmlspecialchars(str_replace('_', ' ', $movimiento['estado_inventario'])); ?></div>
                                 </div>
                                 <?php if ($urlMapaMovimiento !== ''): ?>
                                     <a href="<?php echo htmlspecialchars($urlMapaMovimiento, ENT_QUOTES); ?>" target="_blank" rel="noopener" class="btn btn-secondary">Abrir mapa</a>
                                 <?php endif; ?>
                                 <?php if (!empty($movimiento['observaciones'])): ?><p class="order-description"><?php echo htmlspecialchars($movimiento['observaciones']); ?></p><?php endif; ?>
+                                <?php if ($movimiento['estado'] === 'utilizado' && $movimiento['estado_inventario'] !== 'dado_baja'): ?>
+                                    <form method="POST" onsubmit="return confirm('¿Dar de baja este módem del inventario? El historial de uso se conservará.');">
+                                        <input type="hidden" name="movimiento_baja_id" value="<?php echo (int)$movimiento['id']; ?>">
+                                        <button type="submit" name="dar_baja_modem_utilizado" class="btn btn-danger">Dar de baja del inventario</button>
+                                    </form>
+                                <?php elseif ($movimiento['estado_inventario'] === 'dado_baja'): ?>
+                                    <p class="form-note">Este equipo ya está dado de baja del inventario.</p>
+                                <?php endif; ?>
                             </article>
                         <?php endforeach; ?>
                     </div>

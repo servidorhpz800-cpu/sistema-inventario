@@ -447,9 +447,9 @@ if (!isset(
                                     <tr>
                                         <td><?php echo htmlspecialchars(date('d/m/Y H:i', strtotime($movimiento['updated_at']))); ?><br><?php echo htmlspecialchars($movimiento['tecnico']); ?></td>
                                         <td><?php echo htmlspecialchars($movimiento['cliente_nombre'] ?: 'Sin cliente'); ?> · <?php echo htmlspecialchars($movimiento['cliente_numero'] ?: 'Sin número'); ?><br><?php echo $movimiento['orden_id'] ? 'Orden #' . (int)$movimiento['orden_id'] : 'Sin orden'; ?></td>
-                                        <td><?php echo htmlspecialchars($movimiento['ciudad'] ?: 'Ciudad no registrada'); ?><br><?php echo htmlspecialchars(trim(($movimiento['calle'] ?? '') . ' ' . ($movimiento['numero_exterior'] ?? '') . ' ' . ($movimiento['colonia'] ?? '')) ?: 'Domicilio no registrado'); ?></td>
+                                        <td><?php echo htmlspecialchars($movimiento['ciudad'] ?: 'Ciudad no registrada'); ?><br><?php echo htmlspecialchars($movimiento['domicilio_calles'] ?: (trim(($movimiento['calle'] ?? '') . ' ' . ($movimiento['numero_exterior'] ?? '') . ' ' . ($movimiento['colonia'] ?? '')) ?: 'Domicilio no registrado')); ?></td>
                                         <td><?php echo htmlspecialchars(trim($movimiento['tipo'] . ' ' . ($movimiento['marca'] ?: '') . ' ' . ($movimiento['modelo'] ?: '') . ' ' . ($movimiento['serial'] ?: ''))); ?></td>
-                                        <td><span class="badge <?php echo badgeClass($movimiento['estado']); ?>"><?php echo htmlspecialchars(str_replace('_', ' ', $movimiento['estado'])); ?></span></td>
+                                        <td><span class="badge <?php echo badgeClass($movimiento['estado']); ?>"><?php echo htmlspecialchars(str_replace('_', ' ', $movimiento['estado'])); ?></span><br><small>Inventario: <?php echo htmlspecialchars(str_replace('_', ' ', $movimiento['estado_inventario'])); ?></small></td>
                                         <td><?php echo htmlspecialchars($movimiento['observaciones'] ?: 'Sin observaciones'); ?></td>
                                     </tr>
                                 <?php endforeach; ?>

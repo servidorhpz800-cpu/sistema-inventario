@@ -130,6 +130,7 @@ En instalaciones locales, si `COMPUSER_STORAGE_DRIVER` no está definido, las im
 - `database/migracion_domicilio_reportes.sql` - actualización de instalaciones anteriores
 - `database/migracion_equipo_reportes.sql` - enlaza cada reporte con el equipo utilizado
 - `database/migracion_movimientos_evidencias.sql` - agrega cliente por movimiento y evidencias múltiples
+- `database/migracion_seguimiento_modems.sql` - agrega ciudad y domicilio al seguimiento de módems en instalaciones existentes; aplícala antes de desplegar esta versión
 - `database/migracion_ciudad.sql` - agrega pueblo o ciudad a clientes, órdenes y reportes
 - `database/migracion_indices.sql` - índices para bases existentes
 
